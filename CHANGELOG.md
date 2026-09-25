@@ -1,5 +1,11 @@
 # Changelog
 
+## [2026.9.0a2] - 2026-09-25
+
+### Added
+
+- Local HA brand images under `custom_components/atmos/brand/` (icon + logo, light/dark, @2x) from the official ATMOS mark.
+
 ## [2026.9.0a1] - 2026-09-25
 
 ### Added
