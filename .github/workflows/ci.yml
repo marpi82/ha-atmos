@@ -1,0 +1,303 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: dependency
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Dependency Review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+
+  security:
+    name: security (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout py-atmos-serial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev --group test
+
+      - name: Run Bandit
+        run: uv run bandit -r custom_components -q -ll
+
+      - name: Run pip-audit
+        run: |
+          uv run pip-audit \
+            --format=json \
+            --output=pip-audit-results.json \
+            --progress-spinner=off \
+            --skip-editable
+
+      - name: Upload pip-audit results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: pip-audit-results
+          path: pip-audit-results.json
+          retention-days: 30
+
+  quality:
+    name: quality (lint + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout py-atmos-serial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev --group test
+
+      - name: Ruff (lint)
+        run: uv run ruff check .
+
+      - name: Ruff (format)
+        run: uv run ruff format --check
+
+      - name: mypy (typecheck)
+        run: uv run mypy
+
+  tests:
+    name: tests (${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout py-atmos-serial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group test
+
+      - name: Run pytest
+        run: uv run pytest -q --maxfail=1 --disable-warnings --cov=custom_components.atmos --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage reports to Codecov (pull request)
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: ha-atmos
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage reports to Codecov (push)
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: ha-atmos
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  hassfest:
+    name: hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: home-assistant/actions/hassfest@58bff37c8947f690ace498be413a9b78d6f30f93 # master
+
+  validate-ha:
+    name: validate-ha
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate manifest.json
+        run: |
+          python -c "
+          import json
+          manifest = json.load(open('custom_components/atmos/manifest.json'))
+          required_keys = ['domain', 'name', 'version', 'documentation', 'issue_tracker', 'codeowners']
+          missing = [key for key in required_keys if key not in manifest]
+          if missing:
+              raise ValueError(f'Missing required keys in manifest.json: {missing}')
+          print('manifest.json is valid')
+          "
+
+      - name: Validate strings.json
+        run: |
+          python -c "
+          import json
+          strings = json.load(open('custom_components/atmos/strings.json'))
+          english = json.load(open('custom_components/atmos/translations/en.json'))
+          if strings != english:
+              raise ValueError('translations/en.json drifted from strings.json')
+          print('strings.json is valid')
+          "
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    needs: [secrets, security, quality, tests, hassfest, validate-ha]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout py-atmos-serial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev --no-install-project
+
+      - name: Build distribution
+        run: uv build --no-build-isolation
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/*
+          retention-days: 7

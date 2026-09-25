@@ -1,0 +1,40 @@
+name: Documentation
+description: Docs are wrong, missing, unclear, or out of date relative to the code.
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Docs live under `docs/` (Sphinx + Furo) and must describe the code as it is. Docs↔code drift in either direction is a defect.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What is wrong or missing?
+      description: Page / section, and what you expected to find.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+    validations:
+      required: false
+
+  - type: input
+    id: link
+    attributes:
+      label: Link / path
+      placeholder: docs/guides/language.rst
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I checked the latest docs in this repo’s `docs/` tree.
+          required: true

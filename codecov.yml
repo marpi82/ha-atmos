@@ -1,0 +1,31 @@
+coverage:
+  status:
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
+        only_pulls: true
+    project:
+      default:
+        informational: true
+
+ignore:
+  - "tests/**/*"
+  - "scripts/**/*"
+  - "docs/**/*"
+  - ".github/**"
+  - "codecov.yml"
+  - "pyproject.toml"
+  - "uv.lock"
+  - "hacs.json"
+  - "custom_components/atmos/manifest.json"
+  - "custom_components/atmos/__init__.py"
+  - "custom_components/atmos/config_flow.py"
+  - "custom_components/atmos/wiring.py"
+  - "custom_components/atmos/sensor.py"
+  - "custom_components/atmos/binary_sensor.py"
+  - "custom_components/atmos/entity.py"
+
+comment:
+  layout: "reach, diff, flags, files"
+  require_changes: true

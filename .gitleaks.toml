@@ -1,0 +1,10 @@
+title = "ha-atmos gitleaks configuration"
+
+[allowlist]
+description = "Ignore generated and fixture trees"
+paths = [
+  '''^docs/_build/''',
+  '''^dist/''',
+  '''^build/''',
+  '''^tests/fixtures/''',
+]

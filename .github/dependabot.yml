@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      github-codeql-action:
+        patterns:
+          - "github/codeql-action/*"
+      github-codeql-action-security:
+        applies-to: security-updates
+        patterns:
+          - "github/codeql-action/*"
+    labels:
+      - "dependencies"
+      - "dependabot"
+      - "ci"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-type: "direct"
+    ignore:
+      - dependency-name: "uv"
+      - dependency-name: "urllib3"
+    labels:
+      - "security"
+      - "dependabot"
+    open-pull-requests-limit: 0

@@ -20,8 +20,11 @@ Do not invent RS485 framing or WG1000 register ids in this repository.
 ## Commands
 
 ```bash
-uv run --group dev --group test poe test
+uv sync --locked --group dev --group test
+uv run --group dev --group test poe validate
 ```
+
+CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `build`.
 
 `source.py` and `runtime.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
 

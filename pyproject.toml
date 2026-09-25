@@ -13,7 +13,6 @@ license-files = ["LICENSE"]
 requires-python = ">=3.13.2,<3.15"
 keywords = ["home-assistant", "atmos", "rs485", "wg1000", "heating"]
 dependencies = [
-  "homeassistant>=2026.3.0",
   "py-atmos-serial",
   "py-atmos-wg1000",
 ]
@@ -50,10 +49,17 @@ dev = [
   "poethepoet>=0.48.0,<0.49.0",
   "ruff>=0.16.2,<0.17.0",
   "mypy[dmypy]>=2.3.0,<2.4.0",
+  "pre-commit>=4.3.0,<5.0.0",
+  "pip-audit>=2.4.0,<3.0.0",
+  "bandit>=1.8.4,<2.0.0",
+  "hatch>=1.12.0,<2.0.0",
+  "hatch-vcs>=0.4.0",
 ]
 test = [
   "pytest>=8.3.3,<10.0.0",
   "pytest-asyncio>=1.2.0,<2.0.0",
+  "pytest-cov>=7.0.0,<8.0.0",
+  "diff-cover>=10.5.1,<10.6.0",
 ]
 
 [tool.ruff]
@@ -99,10 +105,26 @@ testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
 
+[tool.coverage.run]
+branch = true
+source = ["custom_components/atmos"]
+omit = [
+  "custom_components/atmos/__init__.py",
+  "custom_components/atmos/config_flow.py",
+  "custom_components/atmos/wiring.py",
+  "custom_components/atmos/sensor.py",
+  "custom_components/atmos/binary_sensor.py",
+  "custom_components/atmos/entity.py",
+]
+
 [tool.poe.tasks]
 fmt = "ruff format"
 lint = "ruff check . --fix"
 fix = ["lint", "fmt"]
 typecheck = "mypy"
 test = { cmd = "pytest -q" }
-validate = ["fmt", "lint", "typecheck", "test"]
+cov = { cmd = "pytest -q --cov=custom_components.atmos --cov-report=term-missing" }
+bandit = { cmd = "bandit -r custom_components -q -ll" }
+pip-audit = { cmd = "pip-audit --skip-editable --progress-spinner off" }
+security = ["bandit", "pip-audit"]
+validate = ["fmt", "lint", "typecheck", "security", "test"]

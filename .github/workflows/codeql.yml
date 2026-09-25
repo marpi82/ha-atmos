@@ -1,0 +1,76 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 0 * * 1"
+
+permissions: read-all
+
+concurrency:
+  group: codeql-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["python"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Checkout py-atmos-serial
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "latest"
+          enable-cache: true
+          prune-cache: true
+
+      - name: Install dependencies (for better analysis)
+        run: |
+          uv python install 3.13
+          uv sync --locked
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: "/language:${{matrix.language}}"
