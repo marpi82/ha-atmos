@@ -1,0 +1,84 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "menu_options": {
+          "serial_only": "RS485 listen only",
+          "gateway_only": "WG1000 only",
+          "both": "RS485 listen, WG1000 fallback"
+        }
+      },
+      "serial": {
+        "title": "RS485",
+        "description": "Passive listen on the boiler bus. The frame layout is not decoded yet, so register values will not appear from this path until the codec exists. Baud rate is not known; enter the adapter setting you are using.",
+        "data": {
+          "serial_port": "Serial port",
+          "serial_baudrate": "Baud rate"
+        },
+        "data_description": {
+          "serial_port": "Device path, for example /dev/ttyUSB0.",
+          "serial_baudrate": "Unconfirmed. 8N1 is used as a UART placeholder."
+        }
+      },
+      "gateway": {
+        "title": "WG1000",
+        "description": "Local gateway. Values are polled, because the gateway does not push them. The register map is empty, so the session stays logged in and does not poll yet.",
+        "data": {
+          "wg1000_host": "Host",
+          "wg1000_username": "Username",
+          "wg1000_password": "Password",
+          "wg1000_verify_tls": "Verify the TLS certificate"
+        },
+        "data_description": {
+          "wg1000_host": "Gateway host name or IP address, without a scheme.",
+          "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA."
+        }
+      }
+    },
+    "error": {
+      "invalid_serial": "Enter a serial port and a positive baud rate.",
+      "invalid_gateway": "Enter the gateway host, username, and password.",
+      "invalid_fallback": "Enter a fallback window between 1 and 3600 seconds."
+    },
+    "abort": {
+      "already_configured": "This ATMOS connection is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ATMOS fallback",
+        "description": "Serial stays primary while decoded RS485 values arrive inside this window. Raw bytes do not count. After the window, WG1000 is used until the next decoded serial value.",
+        "data": {
+          "fallback_after": "Seconds without a decoded RS485 value"
+        }
+      }
+    },
+    "error": {
+      "invalid_fallback": "Enter a fallback window between 1 and 3600 seconds."
+    },
+    "abort": {
+      "single_source": "Fallback applies only when both RS485 and WG1000 are configured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "active_source": {
+        "name": "Active source",
+        "state": {
+          "serial": "RS485",
+          "wg1000": "WG1000",
+          "none": "Unavailable"
+        }
+      },
+      "serial_bytes": {
+        "name": "RS485 bytes seen"
+      }
+    },
+    "binary_sensor": {
+      "serial_link": {
+        "name": "RS485 link"
+      }
+    }
+  }
+}

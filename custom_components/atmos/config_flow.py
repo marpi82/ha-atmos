@@ -1,0 +1,250 @@
+"""Config flow for serial listen, WG1000 poll, or both."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import voluptuous as vol
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+
+from .const import (
+    CONF_FALLBACK_AFTER,
+    CONF_SERIAL_BAUDRATE,
+    CONF_SERIAL_PORT,
+    CONF_WG1000_HOST,
+    CONF_WG1000_PASSWORD,
+    CONF_WG1000_USERNAME,
+    CONF_WG1000_VERIFY_TLS,
+    DEFAULT_FALLBACK_AFTER,
+    DOMAIN,
+)
+
+_SERIAL_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_SERIAL_PORT): str,
+        vol.Required(CONF_SERIAL_BAUDRATE): vol.All(vol.Coerce(int), vol.Range(min=1)),
+    }
+)
+
+_GATEWAY_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_WG1000_HOST): str,
+        vol.Required(CONF_WG1000_USERNAME): str,
+        vol.Required(CONF_WG1000_PASSWORD): str,
+        vol.Required(CONF_WG1000_VERIFY_TLS, default=False): bool,
+    }
+)
+
+
+@dataclass
+class _Draft:
+    include_serial: bool = False
+    include_gateway: bool = False
+    port: str | None = None
+    baudrate: int | None = None
+    host: str | None = None
+    username: str | None = None
+    password: str | None = None
+    verify_tls: bool = False
+
+
+class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
+    """Choose one transport or serial-with-WG1000-fallback."""
+
+    VERSION = 1
+
+    def __init__(self) -> None:
+        """Start with an empty draft."""
+        self._draft = _Draft()
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Show the three setup modes.
+
+        Args:
+            user_input: Unused. The menu routes to a dedicated step.
+        """
+        del user_input
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["serial_only", "gateway_only", "both"],
+        )
+
+    async def async_step_serial_only(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Collect an RS485 port and ignore the gateway.
+
+        Args:
+            user_input: Unused. The serial form is the next step.
+        """
+        del user_input
+        self._draft.include_serial = True
+        self._draft.include_gateway = False
+        return await self.async_step_serial()
+
+    async def async_step_gateway_only(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Collect WG1000 credentials and ignore RS485.
+
+        Args:
+            user_input: Unused. The gateway form is the next step.
+        """
+        del user_input
+        self._draft.include_serial = False
+        self._draft.include_gateway = True
+        return await self.async_step_gateway()
+
+    async def async_step_both(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Collect RS485 first, then WG1000.
+
+        Args:
+            user_input: Unused. The serial form is the next step.
+        """
+        del user_input
+        self._draft.include_serial = True
+        self._draft.include_gateway = True
+        return await self.async_step_serial()
+
+    async def async_step_serial(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Ask for the serial device and baud rate.
+
+        Args:
+            user_input: Submitted port and baud, when the form was posted.
+        """
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            port = _text(user_input.get(CONF_SERIAL_PORT))
+            baud = _positive_int(user_input.get(CONF_SERIAL_BAUDRATE))
+            if port is None or baud is None:
+                errors["base"] = "invalid_serial"
+            else:
+                self._draft.port = port
+                self._draft.baudrate = baud
+                if self._draft.include_gateway:
+                    return await self.async_step_gateway()
+                return await self._create()
+        return self.async_show_form(step_id="serial", data_schema=_SERIAL_SCHEMA, errors=errors)
+
+    async def async_step_gateway(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Ask for the local WG1000 host and credentials.
+
+        Args:
+            user_input: Submitted host and credentials, when the form was posted.
+        """
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = _text(user_input.get(CONF_WG1000_HOST))
+            username = _text(user_input.get(CONF_WG1000_USERNAME))
+            password = user_input.get(CONF_WG1000_PASSWORD)
+            verify = user_input.get(CONF_WG1000_VERIFY_TLS, False)
+            if (
+                host is None
+                or username is None
+                or not isinstance(password, str)
+                or password == ""
+                or not isinstance(verify, bool)
+            ):
+                errors["base"] = "invalid_gateway"
+            else:
+                self._draft.host = host
+                self._draft.username = username
+                self._draft.password = password
+                self._draft.verify_tls = verify
+                return await self._create()
+        return self.async_show_form(step_id="gateway", data_schema=_GATEWAY_SCHEMA, errors=errors)
+
+    async def _create(self) -> ConfigFlowResult:
+        parts: list[str] = []
+        if self._draft.include_serial and self._draft.port is not None:
+            parts.append(f"serial:{self._draft.port}")
+        if self._draft.include_gateway and self._draft.host is not None:
+            parts.append(f"wg1000:{self._draft.host}")
+        await self.async_set_unique_id("|".join(parts))
+        self._abort_if_unique_id_configured()
+        return self.async_create_entry(title=_title(self._draft), data=_entry_data(self._draft))
+
+    @staticmethod
+    def async_get_options_flow(config_entry: ConfigEntry) -> AtmosOptionsFlow:
+        """Return the fallback-window editor.
+
+        Args:
+            config_entry: Existing ATMOS entry. Home Assistant binds it on the flow.
+        """
+        del config_entry
+        return AtmosOptionsFlow()
+
+
+class AtmosOptionsFlow(OptionsFlow):
+    """Edit how long serial may stay quiet before WG1000 takes over."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Show the fallback window when both transports are configured.
+
+        Args:
+            user_input: Submitted window, when the form was posted.
+        """
+        entry = self.config_entry
+        if CONF_SERIAL_PORT not in entry.data or CONF_WG1000_HOST not in entry.data:
+            return self.async_abort(reason="single_source")
+        if user_input is not None:
+            window = _positive_float(user_input.get(CONF_FALLBACK_AFTER))
+            if window is None:
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=_fallback_schema(entry),
+                    errors={"base": "invalid_fallback"},
+                )
+            return self.async_create_entry(title="", data={CONF_FALLBACK_AFTER: window})
+        return self.async_show_form(step_id="init", data_schema=_fallback_schema(entry))
+
+
+def _fallback_schema(entry: ConfigEntry) -> vol.Schema:
+    current = entry.options.get(CONF_FALLBACK_AFTER, DEFAULT_FALLBACK_AFTER)
+    default = float(current) if isinstance(current, int | float) else DEFAULT_FALLBACK_AFTER
+    return vol.Schema(
+        {
+            vol.Required(CONF_FALLBACK_AFTER, default=default): vol.All(vol.Coerce(float), vol.Range(min=1, max=3600)),
+        }
+    )
+
+
+def _entry_data(draft: _Draft) -> dict[str, object]:
+    data: dict[str, object] = {}
+    if draft.include_serial:
+        data[CONF_SERIAL_PORT] = draft.port
+        data[CONF_SERIAL_BAUDRATE] = draft.baudrate
+    if draft.include_gateway:
+        data[CONF_WG1000_HOST] = draft.host
+        data[CONF_WG1000_USERNAME] = draft.username
+        data[CONF_WG1000_PASSWORD] = draft.password
+        data[CONF_WG1000_VERIFY_TLS] = draft.verify_tls
+    return data
+
+
+def _title(draft: _Draft) -> str:
+    if draft.include_serial and draft.include_gateway:
+        return f"ATMOS ({draft.port} / {draft.host})"
+    if draft.include_serial:
+        return f"ATMOS ({draft.port})"
+    return f"ATMOS ({draft.host})"
+
+
+def _text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _positive_int(value: object) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    if value <= 0:
+        return None
+    return value
+
+
+def _positive_float(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    if value <= 0:
+        return None
+    return float(value)

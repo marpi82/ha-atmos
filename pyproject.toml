@@ -1,0 +1,108 @@
+[build-system]
+requires = ["hatchling>=1.27.0", "hatch-vcs>=0.4.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ha-atmos"
+description = "Home Assistant integration for an ATMOS boiler over RS485 listen and WG1000 poll"
+readme = "README.md"
+authors = [{ name = "MarPi82", email = "marpi82.dev@google.com" }]
+maintainers = [{ name = "MarPi82", email = "marpi82.dev@google.com" }]
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.13.2,<3.15"
+keywords = ["home-assistant", "atmos", "rs485", "wg1000", "heating"]
+dependencies = [
+  "homeassistant>=2026.3.0",
+  "py-atmos-serial",
+  "py-atmos-wg1000",
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Topic :: Home Automation",
+  "Typing :: Typed",
+]
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/marpi82/ha-atmos"
+
+[tool.uv.sources]
+py-atmos-serial = { path = "../py-atmos-serial", editable = true }
+py-atmos-wg1000 = { path = "../py-atmos-wg1000", editable = true }
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.version.raw-options]
+local_scheme = "no-local-version"
+
+[tool.hatch.build.targets.wheel]
+packages = ["custom_components"]
+
+[dependency-groups]
+dev = [
+  "poethepoet>=0.48.0,<0.49.0",
+  "ruff>=0.16.2,<0.17.0",
+  "mypy[dmypy]>=2.3.0,<2.4.0",
+]
+test = [
+  "pytest>=8.3.3,<10.0.0",
+  "pytest-asyncio>=1.2.0,<2.0.0",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 130
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "D", "UP", "RUF", "SIM", "B", "S"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"custom_components/atmos/__init__.py" = ["D103"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.13"
+files = [
+  "custom_components/atmos/source.py",
+  "custom_components/atmos/runtime.py",
+  "custom_components/atmos/const.py",
+  "tests",
+]
+strict = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+follow_imports = "silent"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.poe.tasks]
+fmt = "ruff format"
+lint = "ruff check . --fix"
+fix = ["lint", "fmt"]
+typecheck = "mypy"
+test = { cmd = "pytest -q" }
+validate = ["fmt", "lint", "typecheck", "test"]
