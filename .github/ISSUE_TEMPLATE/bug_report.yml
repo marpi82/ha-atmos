@@ -52,11 +52,12 @@ body:
     attributes:
       label: Environment
       value: |
-        - ha-atmos version / git SHA:
+        - ha-atmos version / git SHA / HACS:
         - Python version:
         - Gateway firmware (if known):
         - OS:
         - Home Assistant version (if relevant):
+        - Installation (HACS / manual / other):
       render: markdown
     validations:
       required: true
@@ -72,7 +73,7 @@ body:
         - WG1000 pull (`wiring.py`)
         - Feed / ValueStore / EventBus
         - Docs
-        - CI / packaging
+        - CI / packaging / HACS
         - Other / unsure
     validations:
       required: true

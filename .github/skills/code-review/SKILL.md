@@ -27,3 +27,5 @@ description: Review checklist for ha-atmos pull requests. Use when reviewing PRs
 
 - [ ] Ruff and mypy `--strict` on `source.py`, `runtime.py`, and `const.py`.
 - [ ] Tests cover the policy without a live gateway or serial port.
+- [ ] `hacs.json` HA minimum and `manifest.json` library pins stay aligned with `pyproject.toml` / docs.
+- [ ] If cutting a release, `manifest.json` `"version"` matches the intended tag (HACS zip embeds it).

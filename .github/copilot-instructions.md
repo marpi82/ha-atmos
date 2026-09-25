@@ -6,6 +6,7 @@
 2. English only in code, comments, and docstrings.
 3. Protocol work belongs in `py-atmos-serial` or `py-atmos-wg1000`, not here.
 4. Do not invent RS485 frames or WG1000 register ids.
+5. HACS distribution: keep `hacs.json`, `manifest.json` pins, and release tooling aligned with `DEVELOPMENT.md`.
 
 ## Source selection
 

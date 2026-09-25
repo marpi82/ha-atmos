@@ -1,6 +1,6 @@
 # AGENTS.md — ha-atmos
 
-Sketch of a Home Assistant integration that combines a passive ATMOS RS485 listen with the WG1000 local WebSocket.
+Sketch of a Home Assistant integration that combines a passive ATMOS RS485 listen with the WG1000 local WebSocket. Distributed via **HACS** (custom repository) and GitHub Releases.
 
 ## Project shape
 
@@ -8,6 +8,7 @@ Sketch of a Home Assistant integration that combines a passive ATMOS RS485 liste
 - **Libraries**: `py-atmos-serial` (push, listen) and `py-atmos-wg1000` (pull, poll). Protocol work stays in those libraries.
 - **Home Assistant**: `2026.3.0` (`hacs.json`).
 - **iot_class**: `local_push`. WG1000-only still polls inside the integration; entities themselves do not poll, except the RS485 byte counter.
+- **HACS**: `hacs.json` + `hacs/action` workflow. Releases: `scripts/release.sh` tags the current branch; GitHub Actions builds `ha-atmos-hacs.zip` via `.github/workflows/release.yml`. Bump `manifest.json` `"version"` to the exact tag before tagging. `main` may cut stable or `aN`/`bN`/`rcN`; `release/*` trains are pre-only.
 
 ## Source selection
 
@@ -24,9 +25,11 @@ uv sync --locked --group dev --group test
 uv run --group dev --group test poe validate
 ```
 
-CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `build`.
+CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `HACS Validation`, `build`.
 
 `source.py` and `runtime.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
+
+Keep `manifest.json` library pins aligned with `pyproject.toml`, and `hacs.json` HA minimum aligned with docs (manifest has no HA version field).
 
 ## Conventions
 

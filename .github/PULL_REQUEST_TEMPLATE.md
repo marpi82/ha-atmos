@@ -16,6 +16,7 @@
 - [ ] Source selection still prefers decoded RS485 and falls back to WG1000
 - [ ] No invented frame layout or register ids
 - [ ] `strings.json` matches `translations/en.json` when UI strings change
+- [ ] Library pins stay consistent (`manifest.json` ↔ `pyproject.toml`); `hacs.json` HA minimum stays documented
 - [ ] `uv run --group dev --group test poe test` passes
 
 ## Test plan

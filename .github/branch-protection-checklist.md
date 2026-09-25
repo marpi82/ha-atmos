@@ -3,8 +3,9 @@
 Scorecard `BranchProtection` / `CodeReview` alerts need GitHub Settings changes
 (not only repository files). `CODEOWNERS` is in `.github/CODEOWNERS`.
 
-Release tags are CalVer. This sketch does not publish to PyPI. `main` may carry
-stable or pre-release tags later; `release/*` is for pre-releases only.
+Release tags are CalVer. Distribution is GitHub Releases + HACS zip (not PyPI).
+`main` may cut stable or pre-release tags; `release/*` is for pre-releases only.
+Bump `manifest.json` `"version"` to the exact tag before `scripts/release.sh`.
 
 Apply or refresh via `scripts/apply_github_hardening.sh`. UI: https://github.com/marpi82/ha-atmos/settings/rules
 
@@ -16,7 +17,7 @@ Apply or refresh via `scripts/apply_github_hardening.sh`. UI: https://github.com
 4. Require conversation resolution before merging
 5. Do **not** allow force pushes
 6. Do **not** allow deletions
-7. Require status checks: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `build`
+7. Require status checks: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `HACS Validation`, `build`
 8. Repository Admin may bypass (solo-maintainer)
 
 ## Branch ruleset: `release/**`

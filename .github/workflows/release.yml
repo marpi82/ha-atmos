@@ -1,0 +1,200 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  release:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_repository.fork == false &&
+      github.event.workflow_run.event == 'push'
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout target SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: Detect tag and pre-release
+        id: meta
+        shell: bash
+        run: |
+          TAG="$(git tag --points-at HEAD | head -n1 || true)"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if [[ "$TAG" =~ (a|b|rc)[0-9]+$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Detected tag: ${TAG:-<none>}"
+
+      # Stable tags require the tagged commit on origin/main.
+      # Pre-releases require the commit on origin/main or origin/release/*.
+      - name: Enforce release channel
+        if: ${{ steps.meta.outputs.tag != '' }}
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          PRERELEASE: ${{ steps.meta.outputs.prerelease }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --prune origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/heads/release/*:refs/remotes/origin/release/*"
+
+          on_main=false
+          on_release=false
+          if git merge-base --is-ancestor HEAD origin/main; then
+            on_main=true
+          fi
+          while IFS= read -r ref; do
+            if git merge-base --is-ancestor HEAD "$ref"; then
+              on_release=true
+              break
+            fi
+          done < <(git for-each-ref --format="%(refname)" "refs/remotes/origin/release")
+
+          if [[ "$PRERELEASE" == "true" ]]; then
+            if [[ "$on_main" == "true" || "$on_release" == "true" ]]; then
+              echo "Pre-release tag ${TAG}: commit is on main or release/*"
+              exit 0
+            fi
+            echo "::error::Pre-release tag ${TAG} is not on origin/main or origin/release/*. Cut pre-releases from main or a release train only."
+            exit 1
+          fi
+
+          if [[ "$on_main" == "true" ]]; then
+            echo "Stable tag ${TAG}: commit is on origin/main"
+            exit 0
+          fi
+          echo "::error::Stable tag ${TAG} is not on origin/main. Cut stables from main after merging; from release/* use aN/bN/rcN only."
+          exit 1
+
+      - name: Checkout py-atmos-serial
+        if: ${{ steps.meta.outputs.tag != '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-serial
+          ref: main
+          path: py-atmos-serial
+
+      - name: Checkout py-atmos-wg1000
+        if: ${{ steps.meta.outputs.tag != '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: marpi82/py-atmos-wg1000
+          ref: main
+          path: py-atmos-wg1000
+
+      - name: Link sibling libraries for uv editable sources
+        if: ${{ steps.meta.outputs.tag != '' }}
+        run: |
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-serial" "$GITHUB_WORKSPACE/../py-atmos-serial"
+          ln -sfn "$GITHUB_WORKSPACE/py-atmos-wg1000" "$GITHUB_WORKSPACE/../py-atmos-wg1000"
+
+      - name: Set up Python
+        if: ${{ steps.meta.outputs.tag != '' }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        if: ${{ steps.meta.outputs.tag != '' }}
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Install dependencies
+        if: ${{ steps.meta.outputs.tag != '' }}
+        run: uv sync --locked --group dev --no-install-project
+
+      - name: Build package
+        if: ${{ steps.meta.outputs.tag != '' }}
+        run: uv build --no-build-isolation
+
+      - name: Verify build artifacts
+        if: ${{ steps.meta.outputs.tag != '' }}
+        run: |
+          ls -lh dist/
+          uv tool run twine check dist/*
+
+      - name: Create HACS archive
+        if: ${{ steps.meta.outputs.tag != '' }}
+        run: |
+          mkdir -p hacs-release
+          cp -r custom_components hacs-release/
+          cp README.md hacs-release/
+          cp LICENSE hacs-release/
+          cd hacs-release
+          zip -r ../ha-atmos-hacs.zip .
+          cd ..
+
+      - name: Upload artifacts
+        if: ${{ steps.meta.outputs.tag != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: dist-${{ steps.meta.outputs.tag }}
+          path: |
+            dist/*
+            ha-atmos-hacs.zip
+
+      - name: Fetch release drafter notes
+        if: ${{ steps.meta.outputs.tag != '' }}
+        id: drafter
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.tag }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: releases } = await github.rest.repos.listReleases({ owner, repo, per_page: 50 });
+            const draft = releases.find((release) => release.draft === true);
+            const draftBody = draft?.body?.trim() ?? "";
+            const draftName = draft?.name?.trim() ?? "";
+            core.setOutput("body", draftBody);
+            core.setOutput("name", draftName || `Release ${process.env.RELEASE_TAG}`);
+
+      - name: Create Release
+        if: ${{ steps.meta.outputs.tag != '' }}
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.drafter.outputs.name }}
+          body: |
+            ${{ steps.drafter.outputs.body }}
+
+            ## Installation
+
+            ### HACS (Recommended)
+            1. Open HACS in Home Assistant.
+            2. Add this repository as a custom repository (category: Integration).
+            3. Search for "ATMOS" in HACS and install the integration.
+            4. Restart Home Assistant.
+
+            ### Manual Installation
+            1. Download `ha-atmos-hacs.zip` from this release.
+            2. Extract it and copy `custom_components/atmos` to your Home Assistant `custom_components` directory.
+            3. Restart Home Assistant.
+
+            ## Requirements
+            - Python >= 3.13.2
+            - Home Assistant >= 2026.3.0
+            - `py-atmos-serial` and `py-atmos-wg1000` from PyPI (pinned in `manifest.json`)
+          draft: false
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
+          files: |
+            ha-atmos-hacs.zip
+            dist/*

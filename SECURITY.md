@@ -11,10 +11,14 @@ Please do not create a public GitHub issue for security vulnerabilities.
 
 ## Supported Versions
 
-Only the **latest release** receives security fixes.
+Only the **latest release** (including HACS) receives security fixes.
 
 ## Tooling
 
 - bandit, ruff `S`, pip-audit, CodeQL, gitleaks, and a weekly OpenSSF Scorecard workflow.
+
+## Hardening tips
+
+1. Keep the integration updated via HACS or by tracking GitHub releases.
 
 Gateway passwords live in the Home Assistant config entry. Do not log them. Do not commit bus captures.

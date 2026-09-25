@@ -13,8 +13,8 @@ license-files = ["LICENSE"]
 requires-python = ">=3.13.2,<3.15"
 keywords = ["home-assistant", "atmos", "rs485", "wg1000", "heating"]
 dependencies = [
-  "py-atmos-serial",
-  "py-atmos-wg1000",
+  "py-atmos-serial==2026.9.0a1",
+  "py-atmos-wg1000==2026.9.0b1",
 ]
 classifiers = [
   "Development Status :: 1 - Planning",
@@ -28,7 +28,12 @@ classifiers = [
 dynamic = ["version"]
 
 [project.urls]
+Homepage = "https://github.com/marpi82/ha-atmos"
+Documentation = "https://github.com/marpi82/ha-atmos"
 Repository = "https://github.com/marpi82/ha-atmos"
+Issues = "https://github.com/marpi82/ha-atmos/issues"
+Changelog = "https://github.com/marpi82/ha-atmos/blob/main/CHANGELOG.md"
+Security = "https://github.com/marpi82/ha-atmos/security/advisories"
 
 [tool.uv.sources]
 py-atmos-serial = { path = "../py-atmos-serial", editable = true }

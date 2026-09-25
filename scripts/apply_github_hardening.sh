@@ -137,6 +137,7 @@ ruleset_main() {
           {"context": "quality (lint + typecheck)"},
           {"context": "tests (3.13)"},
           {"context": "hassfest"},
+          {"context": "HACS Validation"},
           {"context": "build"}
         ]
       }
