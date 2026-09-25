@@ -4,14 +4,25 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ha-atmos"
-description = "Home Assistant integration for an ATMOS boiler over RS485 listen and WG1000 poll"
+description = "Home Assistant custom integration for ATMOS boilers (WG1000 poll + future RS485 listen)"
 readme = "README.md"
 authors = [{ name = "MarPi82", email = "marpi82.dev@google.com" }]
 maintainers = [{ name = "MarPi82", email = "marpi82.dev@google.com" }]
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.13.2,<3.15"
-keywords = ["home-assistant", "atmos", "rs485", "wg1000", "heating"]
+keywords = [
+  "atmos",
+  "wg1000",
+  "rs485",
+  "heating",
+  "boiler",
+  "home-assistant",
+  "homeassistant-custom-component",
+  "homeassistant-integration",
+  "hacs",
+  "home-automation",
+]
 dependencies = [
   "py-atmos-serial==2026.9.0a1",
   "py-atmos-wg1000==2026.9.0b1",
