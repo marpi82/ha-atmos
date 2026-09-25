@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026.9.0a1] - 2026-09-25
+
+### Added
+
+- First HACS pre-release: WG1000 poll of outdoor / circuit / DHW temperatures, humidity, and packed setpoints.
+- Dual-source runtime kept for a future RS485 path; serial / both are hidden in the config flow for now.
+- HACS packaging (`ha-atmos-hacs.zip`) via GitHub Releases.
+
 ## Unreleased
 
 ### Added
