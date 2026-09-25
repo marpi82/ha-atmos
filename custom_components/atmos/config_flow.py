@@ -11,6 +11,8 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.core import HomeAssistant
+from pyatmos_wg1000 import AtmosClient
 
 from .const import (
     CONF_FALLBACK_AFTER,
@@ -31,15 +33,6 @@ _SERIAL_SCHEMA = vol.Schema(
     }
 )
 
-_GATEWAY_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_WG1000_HOST): str,
-        vol.Required(CONF_WG1000_USERNAME): str,
-        vol.Required(CONF_WG1000_PASSWORD): str,
-        vol.Required(CONF_WG1000_VERIFY_TLS, default=False): bool,
-    }
-)
-
 
 @dataclass
 class _Draft:
@@ -54,7 +47,7 @@ class _Draft:
 
 
 class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Set up the local WG1000 poll path.
+    """Set up and reconfigure the local WG1000 poll path.
 
     Serial listen remains in the codebase for a later release; the user menu
     does not offer it yet.
@@ -76,6 +69,49 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
         self._draft.include_serial = False
         self._draft.include_gateway = True
         return await self.async_step_gateway()
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Change WG1000 host, credentials, or TLS verification.
+
+        Args:
+            user_input: Submitted gateway fields, when the form was posted.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            host = _host(user_input.get(CONF_WG1000_HOST))
+            username = _text(user_input.get(CONF_WG1000_USERNAME))
+            password = user_input.get(CONF_WG1000_PASSWORD)
+            verify = user_input.get(CONF_WG1000_VERIFY_TLS, False)
+            if not isinstance(password, str):
+                password = ""
+            if password == "":
+                existing = entry.data.get(CONF_WG1000_PASSWORD)
+                password = existing if isinstance(existing, str) else ""
+            if host is None or username is None or password == "" or not isinstance(verify, bool):
+                errors["base"] = "invalid_gateway"
+            else:
+                auth_error = await _probe_gateway(self.hass, host, username, password, verify)
+                if auth_error is not None:
+                    errors["base"] = auth_error
+                else:
+                    data = dict(entry.data)
+                    data[CONF_WG1000_HOST] = host
+                    data[CONF_WG1000_USERNAME] = username
+                    data[CONF_WG1000_PASSWORD] = password
+                    data[CONF_WG1000_VERIFY_TLS] = verify
+                    await self.async_set_unique_id(_unique_id(data))
+                    self._abort_if_unique_id_mismatch(reason="already_configured")
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        data=data,
+                        title=_title_from_data(data),
+                    )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=_gateway_schema(entry.data, password_optional=True),
+            errors=errors,
+        )
 
     async def async_step_serial_only(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Collect an RS485 port and ignore the gateway.
@@ -142,7 +178,7 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
         """
         errors: dict[str, str] = {}
         if user_input is not None:
-            host = _text(user_input.get(CONF_WG1000_HOST))
+            host = _host(user_input.get(CONF_WG1000_HOST))
             username = _text(user_input.get(CONF_WG1000_USERNAME))
             password = user_input.get(CONF_WG1000_PASSWORD)
             verify = user_input.get(CONF_WG1000_VERIFY_TLS, False)
@@ -155,22 +191,22 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
             ):
                 errors["base"] = "invalid_gateway"
             else:
-                self._draft.host = host
-                self._draft.username = username
-                self._draft.password = password
-                self._draft.verify_tls = verify
-                return await self._create()
-        return self.async_show_form(step_id="gateway", data_schema=_GATEWAY_SCHEMA, errors=errors)
+                auth_error = await _probe_gateway(self.hass, host, username, password, verify)
+                if auth_error is not None:
+                    errors["base"] = auth_error
+                else:
+                    self._draft.host = host
+                    self._draft.username = username
+                    self._draft.password = password
+                    self._draft.verify_tls = verify
+                    return await self._create()
+        return self.async_show_form(step_id="gateway", data_schema=_gateway_schema(), errors=errors)
 
     async def _create(self) -> ConfigFlowResult:
-        parts: list[str] = []
-        if self._draft.include_serial and self._draft.port is not None:
-            parts.append(f"serial:{self._draft.port}")
-        if self._draft.include_gateway and self._draft.host is not None:
-            parts.append(f"wg1000:{self._draft.host}")
-        await self.async_set_unique_id("|".join(parts))
+        data = _entry_data(self._draft)
+        await self.async_set_unique_id(_unique_id(data))
         self._abort_if_unique_id_configured()
-        return self.async_create_entry(title=_title(self._draft), data=_entry_data(self._draft))
+        return self.async_create_entry(title=_title(self._draft), data=data)
 
     @staticmethod
     def async_get_options_flow(config_entry: ConfigEntry) -> AtmosOptionsFlow:
@@ -207,6 +243,51 @@ class AtmosOptionsFlow(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=_fallback_schema(entry))
 
 
+async def _probe_gateway(
+    hass: HomeAssistant,
+    host: str,
+    username: str,
+    password: str,
+    verify_tls: bool,
+) -> str | None:
+    """Return a config-flow error key, or ``None`` when login succeeds."""
+    del hass  # reserved for future executor helpers
+    client = AtmosClient(host, verify_tls=verify_tls)
+    try:
+        await client.connect()
+        await client.hello()
+        result = await client.login(username, password)
+    except Exception:
+        await client.aclose()
+        return "cannot_connect"
+    await client.aclose()
+    if result.logged_in:
+        return None
+    if result.blocked:
+        return "login_blocked"
+    return "invalid_auth"
+
+
+def _gateway_schema(
+    defaults: dict[str, Any] | None = None,
+    *,
+    password_optional: bool = False,
+) -> vol.Schema:
+    data = defaults or {}
+    host = data.get(CONF_WG1000_HOST, "")
+    username = data.get(CONF_WG1000_USERNAME, "")
+    verify = data.get(CONF_WG1000_VERIFY_TLS, False)
+    password_key = vol.Optional(CONF_WG1000_PASSWORD, default="") if password_optional else vol.Required(CONF_WG1000_PASSWORD)
+    return vol.Schema(
+        {
+            vol.Required(CONF_WG1000_HOST, default=host if isinstance(host, str) else ""): str,
+            vol.Required(CONF_WG1000_USERNAME, default=username if isinstance(username, str) else ""): str,
+            password_key: str,
+            vol.Required(CONF_WG1000_VERIFY_TLS, default=bool(verify)): bool,
+        }
+    )
+
+
 def _fallback_schema(entry: ConfigEntry) -> vol.Schema:
     current = entry.options.get(CONF_FALLBACK_AFTER, DEFAULT_FALLBACK_AFTER)
     default = float(current) if isinstance(current, int | float) else DEFAULT_FALLBACK_AFTER
@@ -230,12 +311,44 @@ def _entry_data(draft: _Draft) -> dict[str, object]:
     return data
 
 
+def _unique_id(data: dict[str, object]) -> str:
+    parts: list[str] = []
+    port = data.get(CONF_SERIAL_PORT)
+    host = data.get(CONF_WG1000_HOST)
+    if isinstance(port, str):
+        parts.append(f"serial:{port}")
+    if isinstance(host, str):
+        parts.append(f"wg1000:{host}")
+    return "|".join(parts)
+
+
 def _title(draft: _Draft) -> str:
-    if draft.include_serial and draft.include_gateway:
-        return f"ATMOS ({draft.port} / {draft.host})"
-    if draft.include_serial:
-        return f"ATMOS ({draft.port})"
-    return f"ATMOS ({draft.host})"
+    return _title_from_data(_entry_data(draft))
+
+
+def _title_from_data(data: dict[str, object]) -> str:
+    port = data.get(CONF_SERIAL_PORT)
+    host = data.get(CONF_WG1000_HOST)
+    if isinstance(port, str) and isinstance(host, str):
+        return f"ATMOS ({port} / {host})"
+    if isinstance(port, str):
+        return f"ATMOS ({port})"
+    if isinstance(host, str):
+        return f"ATMOS ({host})"
+    return "ATMOS"
+
+
+def _host(value: object) -> str | None:
+    text = _text(value)
+    if text is None:
+        return None
+    lowered = text.lower()
+    for prefix in ("https://", "http://", "wss://", "ws://"):
+        if lowered.startswith(prefix):
+            text = text[len(prefix) :]
+            break
+    text = text.split("/")[0].strip()
+    return text or None
 
 
 def _text(value: object) -> str | None:

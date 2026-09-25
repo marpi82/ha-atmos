@@ -30,7 +30,22 @@
           "wg1000_verify_tls": "Verify the TLS certificate"
         },
         "data_description": {
+          "wg1000_host": "Gateway host name or IP address, without a scheme (for example 192.168.1.10).",
+          "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure WG1000",
+        "description": "Update the gateway address or credentials. Leave the password blank to keep the current one.",
+        "data": {
+          "wg1000_host": "Host",
+          "wg1000_username": "Username",
+          "wg1000_password": "Password",
+          "wg1000_verify_tls": "Verify the TLS certificate"
+        },
+        "data_description": {
           "wg1000_host": "Gateway host name or IP address, without a scheme.",
+          "wg1000_password": "Leave empty to keep the password already stored in this entry.",
           "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA."
         }
       }
@@ -38,10 +53,14 @@
     "error": {
       "invalid_serial": "Enter a serial port and a positive baud rate.",
       "invalid_gateway": "Enter the gateway host, username, and password.",
-      "invalid_fallback": "Enter a fallback window between 1 and 3600 seconds."
+      "invalid_fallback": "Enter a fallback window between 1 and 3600 seconds.",
+      "cannot_connect": "Could not open a WebSocket to the gateway. Check the host, that Home Assistant can reach it on the LAN, and that TLS verify matches the device certificate.",
+      "invalid_auth": "The gateway rejected the username or password.",
+      "login_blocked": "The gateway locked the account after failed logins. Wait and try again."
     },
     "abort": {
-      "already_configured": "This ATMOS connection is already configured."
+      "already_configured": "This ATMOS connection is already configured.",
+      "reconfigure_successful": "The entry was updated."
     }
   },
   "options": {

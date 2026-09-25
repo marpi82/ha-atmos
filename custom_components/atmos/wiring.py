@@ -213,13 +213,19 @@ async def _start_gateway(entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
     client = AtmosClient(host, port=port, verify_tls=verify)
     try:
         await client.connect()
+        await client.hello()
         result = await client.login(username, password)
     except Exception:
         LOGGER.exception("WG1000 connection failed")
         await client.aclose()
         return False
     if not result.logged_in:
-        LOGGER.error("WG1000 login was rejected")
+        LOGGER.error(
+            "WG1000 login was rejected (role=%s blocked=%s retry_after_s=%s)",
+            result.role,
+            result.blocked,
+            result.retry_after_s,
+        )
         await client.aclose()
         return False
 
@@ -262,10 +268,8 @@ async def _pull_gateway(client: AtmosClient, runtime: AtmosRuntime, stop: asynci
             await feed.run()
         finally:
             bridge.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await bridge
-            except asyncio.CancelledError:
-                return
     except asyncio.CancelledError:
         raise
     except Exception:

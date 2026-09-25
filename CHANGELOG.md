@@ -1,5 +1,19 @@
 # Changelog
 
+## [2026.9.0a3] - 2026-09-25
+
+### Added
+
+- Config-entry reconfigure flow for WG1000 host, username, password, and TLS verify.
+- Live connect + Hello + login probe during setup and reconfigure.
+
+### Fixed
+
+- Call `hello()` before `login()` on the gateway session.
+- Strip `https://` / `wss://` prefixes from the host field.
+- Avoid `return` inside a `finally` in the WG1000 pull task.
+- Require `py-atmos-wg1000==2026.9.0b2` (non-blocking TLS context).
+
 ## [2026.9.0a2] - 2026-09-25
 
 ### Added
