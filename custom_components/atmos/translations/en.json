@@ -22,7 +22,7 @@
       },
       "gateway": {
         "title": "WG1000",
-        "description": "Local gateway. Values are polled, because the gateway does not push them. The register map is empty, so the session stays logged in and does not poll yet.",
+        "description": "Local gateway. Values are polled because the gateway does not push them. Outdoor, circuit, and DHW temperatures, humidity, and setpoints are read from the ACD register map.",
         "data": {
           "wg1000_host": "Host",
           "wg1000_username": "Username",
@@ -73,6 +73,75 @@
       },
       "serial_bytes": {
         "name": "RS485 bytes seen"
+      },
+      "outdoor_temperature": {
+        "name": "Outdoor temperature"
+      },
+      "outdoor_temperature_min": {
+        "name": "Outdoor temperature (min)"
+      },
+      "outdoor_temperature_max": {
+        "name": "Outdoor temperature (max)"
+      },
+      "circuit_1_temperature": {
+        "name": "Circuit 1 temperature"
+      },
+      "circuit_2_temperature": {
+        "name": "Circuit 2 temperature"
+      },
+      "circuit_3_temperature": {
+        "name": "Circuit 3 temperature"
+      },
+      "circuit_4_temperature": {
+        "name": "Circuit 4 temperature"
+      },
+      "dhw_temperature": {
+        "name": "DHW temperature"
+      },
+      "circuit_1_humidity": {
+        "name": "Circuit 1 humidity"
+      },
+      "circuit_2_humidity": {
+        "name": "Circuit 2 humidity"
+      },
+      "circuit_3_humidity": {
+        "name": "Circuit 3 humidity"
+      },
+      "circuit_4_humidity": {
+        "name": "Circuit 4 humidity"
+      },
+      "dhw_humidity": {
+        "name": "DHW humidity"
+      },
+      "circuit_1_comfort_setpoint": {
+        "name": "Circuit 1 comfort setpoint"
+      },
+      "circuit_1_reduced_setpoint": {
+        "name": "Circuit 1 reduced setpoint"
+      },
+      "circuit_2_comfort_setpoint": {
+        "name": "Circuit 2 comfort setpoint"
+      },
+      "circuit_2_reduced_setpoint": {
+        "name": "Circuit 2 reduced setpoint"
+      },
+      "circuit_3_comfort_setpoint": {
+        "name": "Circuit 3 comfort setpoint"
+      },
+      "circuit_3_reduced_setpoint": {
+        "name": "Circuit 3 reduced setpoint"
+      },
+      "circuit_4_comfort_setpoint": {
+        "name": "Circuit 4 comfort setpoint"
+      },
+      "circuit_4_reduced_setpoint": {
+        "name": "Circuit 4 reduced setpoint"
+      },
+      "dhw_comfort_setpoint": {
+        "name": "DHW comfort setpoint"
+      },
+      "dhw_reduced_setpoint": {
+        "name": "DHW reduced setpoint"
       }
     },
     "binary_sensor": {

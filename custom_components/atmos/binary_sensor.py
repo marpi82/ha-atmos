@@ -35,6 +35,8 @@ class AtmosSerialLinkSensor(BinarySensorEntity):
     """On when the serial port is open.
 
     This is the adapter, not a decoded boiler frame.
+
+    TODO(rs485): create again when the config flow re-offers serial listen.
     """
 
     _attr_has_entity_name = True

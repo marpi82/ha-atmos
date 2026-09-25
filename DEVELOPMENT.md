@@ -17,6 +17,13 @@ symlinks them next to the workspace the same way.
 `source.py` and `runtime.py` must not import Home Assistant so unit tests run
 without it.
 
+## TODO(rs485)
+
+The config flow hides serial until `py-atmos-serial` can decode frames. Keep
+`py-atmos-serial` pinned, leave `source.py` / `runtime.py` dual-path, and
+re-offer `serial_only` / `both` when the codec lands. See GitHub issues tagged
+`rs485` / `enhancement`.
+
 ## Field-testing library pins on HassOS
 
 On **HassOS / HACS**, do **not** pin libraries with `git+https://…@sha` in

@@ -7,12 +7,11 @@ import logging
 import time
 from collections.abc import Mapping
 from contextlib import suppress
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from pyatmos_serial import AtmosSerialFeed, SerialPortSource, SerialSettings
 from pyatmos_wg1000 import AtmosClient
 
 from .const import (
@@ -33,6 +32,9 @@ from .const import (
 )
 from .runtime import AtmosRuntime
 from .source import SourceConfig
+
+if TYPE_CHECKING:
+    from pyatmos_serial import AtmosSerialFeed
 
 LOGGER = logging.getLogger(__name__)
 
@@ -133,8 +135,17 @@ async def _reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 
 async def _start_serial(hass: HomeAssistant, entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
+    """Open the RS485 listen path when the entry still configures it.
+
+    TODO(rs485): the config flow no longer creates serial entries. Keep this
+    path for existing dual-source entries and for the future menu.
+    """
     if not runtime.config.serial:
         return False
+    # Lazy import: new installs are WG1000-only and should not need the serial
+    # package at import time of this module.
+    from pyatmos_serial import AtmosSerialFeed, SerialPortSource, SerialSettings
+
     port_name = entry.data.get(CONF_SERIAL_PORT)
     baud = entry.data.get(CONF_SERIAL_BAUDRATE)
     if not isinstance(port_name, str) or not isinstance(baud, int):
@@ -230,7 +241,7 @@ async def _start_gateway(entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
 
 
 async def _pull_gateway(client: AtmosClient, runtime: AtmosRuntime, stop: asyncio.Event) -> None:
-    """Poll WG1000 registers once a map exists. Until then, stay logged in."""
+    """Poll the configured WG1000 register map and bridge updates into the runtime."""
     try:
         register_ids = pull_register_ids()
         if not register_ids:
@@ -240,6 +251,7 @@ async def _pull_gateway(client: AtmosClient, runtime: AtmosRuntime, stop: asynci
         from pyatmos_wg1000 import AtmosFeed
 
         feed = AtmosFeed(client, register_ids, interval=DEFAULT_POLL_INTERVAL)
+        LOGGER.info("WG1000 pull started for %s registers", len(register_ids))
 
         async def _bridge() -> None:
             async for update in feed.bus.subscribe():

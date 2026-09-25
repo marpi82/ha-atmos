@@ -11,10 +11,12 @@ Home Assistant custom integration for an ATMOS boiler. It can use a passive
 RS485 listen (`py-atmos-serial`), the local WG1000 WebSocket
 (`py-atmos-wg1000`), or both.
 
-**Status:** sketch. RS485 framing is not reverse-engineered, and the WG1000
-register map used by this integration is empty. The config flow, the source
-switch, and three diagnostic entities are in place. There are no boiler
-sensors yet.
+**Status:** WG1000 poll path is live for outdoor / circuit / DHW temperatures,
+humidity, and comfort/reduced setpoints. RS485 listen stays pinned as a
+dependency but is hidden in the config flow until the serial codec exists.
+There are no pump or mixing-valve entities yet (status words need more reverse
+engineering in `py-atmos-wg1000`).
+
 
 ## How the two paths combine
 
@@ -28,11 +30,13 @@ Raw bytes do not make serial "fresh". Until the codec exists, a dual setup
 stays on WG1000 whenever that session is up. Options → fallback window is
 shown only when both paths are configured.
 
-Diagnostic entities (no register map yet):
+Diagnostic entities:
 
 * **Active source** — `serial`, `wg1000`, or `none`
-* **RS485 link** — the port is open
-* **RS485 bytes seen** — bytes read, including bytes that were not decoded
+* **RS485 link** / **RS485 bytes seen** — only when an entry still configures serial
+
+WG1000 value sensors (decoded with the library helpers): outdoor and circuit/DHW
+temperatures, humidity, and comfort/reduced setpoints.
 
 ## Installation
 

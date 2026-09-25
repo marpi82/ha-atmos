@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from .registers import pull_register_ids
+
 DOMAIN: Final = "atmos"
 PLATFORMS: Final[list[str]] = ["sensor", "binary_sensor"]
 
@@ -20,11 +22,19 @@ DEFAULT_FALLBACK_AFTER: Final = 120.0
 DEFAULT_WG1000_PORT: Final = 443
 DEFAULT_POLL_INTERVAL: Final = 30.0
 
-
-def pull_register_ids() -> tuple[int, ...]:
-    """Return WG1000 register ids to poll.
-
-    The tuple stays empty until the register map is known. The pull loop then
-    stays logged in and does not invent ids.
-    """
-    return ()
+__all__ = [
+    "CONF_FALLBACK_AFTER",
+    "CONF_SERIAL_BAUDRATE",
+    "CONF_SERIAL_PORT",
+    "CONF_WG1000_HOST",
+    "CONF_WG1000_PASSWORD",
+    "CONF_WG1000_PORT",
+    "CONF_WG1000_USERNAME",
+    "CONF_WG1000_VERIFY_TLS",
+    "DEFAULT_FALLBACK_AFTER",
+    "DEFAULT_POLL_INTERVAL",
+    "DEFAULT_WG1000_PORT",
+    "DOMAIN",
+    "PLATFORMS",
+    "pull_register_ids",
+]

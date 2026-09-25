@@ -1,4 +1,8 @@
-"""Config flow for serial listen, WG1000 poll, or both."""
+"""Config flow for the WG1000 poll path.
+
+TODO(rs485): re-offer ``serial_only`` / ``both`` in the user menu when the
+serial codec is ready. The serial form steps below stay for that path.
+"""
 
 from __future__ import annotations
 
@@ -50,7 +54,11 @@ class _Draft:
 
 
 class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Choose one transport or serial-with-WG1000-fallback."""
+    """Set up the local WG1000 poll path.
+
+    Serial listen remains in the codebase for a later release; the user menu
+    does not offer it yet.
+    """
 
     VERSION = 1
 
@@ -59,19 +67,20 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
         self._draft = _Draft()
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Show the three setup modes.
+        """Start WG1000 setup. Serial modes are hidden until the codec exists.
 
         Args:
-            user_input: Unused. The menu routes to a dedicated step.
+            user_input: Unused. The gateway form is the next step.
         """
         del user_input
-        return self.async_show_menu(
-            step_id="user",
-            menu_options=["serial_only", "gateway_only", "both"],
-        )
+        self._draft.include_serial = False
+        self._draft.include_gateway = True
+        return await self.async_step_gateway()
 
     async def async_step_serial_only(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Collect an RS485 port and ignore the gateway.
+
+        TODO(rs485): wire this back into ``async_step_user`` when serial is ready.
 
         Args:
             user_input: Unused. The serial form is the next step.
@@ -94,6 +103,8 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_both(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Collect RS485 first, then WG1000.
+
+        TODO(rs485): wire this back into ``async_step_user`` when serial is ready.
 
         Args:
             user_input: Unused. The serial form is the next step.

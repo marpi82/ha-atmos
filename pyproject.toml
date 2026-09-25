@@ -105,6 +105,7 @@ files = [
   "custom_components/atmos/source.py",
   "custom_components/atmos/runtime.py",
   "custom_components/atmos/const.py",
+  "custom_components/atmos/registers.py",
   "tests",
 ]
 strict = true
