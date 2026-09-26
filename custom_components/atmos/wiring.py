@@ -40,6 +40,18 @@ if TYPE_CHECKING:
 LOGGER = logging.getLogger(__name__)
 
 
+async def _await_cancelled(task: asyncio.Task[Any]) -> None:
+    """Wait for a cancelled task without using ``contextlib.suppress``.
+
+    CodeQL treats ``suppress(CancelledError): await task`` as an ineffectual
+    statement; an explicit ``except`` with ``return`` keeps the wait visible.
+    """
+    try:
+        await task
+    except asyncio.CancelledError:
+        return
+
+
 def runtime_for(hass: HomeAssistant, entry: ConfigEntry) -> AtmosRuntime:
     """Return the runtime stored for ``entry``.
 
@@ -165,8 +177,7 @@ async def _start_serial(hass: HomeAssistant, entry: ConfigEntry, runtime: AtmosR
 
     async def _close_serial() -> None:
         listen.cancel()
-        with suppress(asyncio.CancelledError):
-            await listen
+        await _await_cancelled(listen)
         await feed.stop()
 
     runtime.add_closer(_close_serial)
@@ -187,8 +198,7 @@ async def _listen(feed: AtmosSerialFeed, runtime: AtmosRuntime) -> None:
         raise
     finally:
         bridge.cancel()
-        with suppress(asyncio.CancelledError):
-            await bridge
+        await _await_cancelled(bridge)
 
 
 async def _bridge_serial(feed: AtmosSerialFeed, runtime: AtmosRuntime) -> None:
@@ -236,7 +246,7 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
         if language is None:
             codes = tuple(lang.code for lang in catalog.languages())
             mapped = gateway_language_for_hass(hass.config.language, codes)
-            catalog.select(mapped or catalog.language.code)
+            language = catalog.select(mapped or catalog.language.code).code
         own_text = await client.fetch_own_text()
         dump = await client.fetch_info()
     except Exception:
@@ -246,7 +256,7 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
         await client.aclose()
         return False
 
-    runtime.language = catalog.language.code
+    runtime.language = language or catalog.language.code
     runtime.note_info_groups(resolve_info_dump(dump, catalog, own_text))
 
     pull = asyncio.create_task(
@@ -256,8 +266,7 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
 
     async def _close_gateway() -> None:
         pull.cancel()
-        with suppress(asyncio.CancelledError):
-            await pull
+        await _await_cancelled(pull)
         with suppress(Exception):
             await client.logout()
         await client.aclose()
@@ -287,8 +296,7 @@ async def _pull_info(
             await feed.run()
         finally:
             bridge.cancel()
-            with suppress(asyncio.CancelledError):
-                await bridge
+            await _await_cancelled(bridge)
     except asyncio.CancelledError:
         raise
     except Exception:
