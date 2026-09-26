@@ -115,9 +115,13 @@
         "state_attributes": {
           "preset_mode": {
             "state": {
+              "holiday": "Holiday",
+              "absence": "Absence",
+              "visit": "Visit",
+              "auto": "Auto",
+              "summer": "Summer",
               "comfort": "Comfort",
               "reduced": "Reduced",
-              "auto": "Auto",
               "standby": "Standby"
             }
           }

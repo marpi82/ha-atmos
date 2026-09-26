@@ -94,6 +94,46 @@ def test_records_by_id_skips_missing_values() -> None:
     assert records_by_id([filled, empty]) == {1: 9}
 
 
+def test_circuits_from_records_holiday_and_summer_presets() -> None:
+    """Timed and summer regime indices map to preset names."""
+    records = [
+        ParamRecord(register_id=hod16_id(Hod16.O1_OBECNE), kind=ParamType.READ_ONLY, value=0x01),
+        ParamRecord(
+            register_id=hod16_id(Hod16.O1_REZIM),
+            kind=ParamType.READ_ONLY,
+            value=encode_circuit_regime(regime_preset_index("holiday")),
+        ),
+    ]
+    assert circuits_from_records(records)[0].preset == "holiday"
+    summer_records = [
+        ParamRecord(register_id=hod16_id(Hod16.O1_OBECNE), kind=ParamType.READ_ONLY, value=0x01),
+        ParamRecord(
+            register_id=hod16_id(Hod16.O1_REZIM),
+            kind=ParamType.READ_ONLY,
+            value=encode_circuit_regime(regime_preset_index("summer")),
+        ),
+    ]
+    assert circuits_from_records(summer_records)[0].preset == "summer"
+
+
+def test_simple_presets_match_regime_menu_order() -> None:
+    """Homepage climate exposes every Regime_menu permanent/timed mode."""
+    from custom_components.atmos.circuit import SIMPLE_PRESETS
+
+    assert SIMPLE_PRESETS == (
+        "holiday",
+        "absence",
+        "visit",
+        "auto",
+        "summer",
+        "comfort",
+        "reduced",
+        "standby",
+    )
+    for name in SIMPLE_PRESETS:
+        assert regime_preset_index(name) >= 0
+
+
 def test_circuit_register_ids_count() -> None:
     """Five circuits times five register families."""
     assert len(circuit_register_ids()) == 25

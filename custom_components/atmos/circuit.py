@@ -29,7 +29,16 @@ _TEPLOTY = (Hod16.O1_TEPLOTY, Hod16.O2_TEPLOTY, Hod16.O3_TEPLOTY, Hod16.O4_TEPLO
 # tempType from OBECNE: 2 = reduced (útlum); else treat comfort as active target.
 _TEMP_TYPE_REDUCED = 2
 
-SIMPLE_PRESETS = ("comfort", "reduced", "auto", "standby")
+SIMPLE_PRESETS = (
+    "holiday",
+    "absence",
+    "visit",
+    "auto",
+    "summer",
+    "comfort",
+    "reduced",
+    "standby",
+)
 
 
 @dataclass(frozen=True)

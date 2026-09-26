@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from pyatmos_wg1000.protocol import (
+    AC16_OWN_TEXT_OFFSET,
     InfoDump,
     InfoItem,
     TextLookup,
@@ -125,7 +126,16 @@ def _title_for(item: InfoItem, catalog: TextLookup, own_text: Sequence[str]) -> 
     right = resolve_text_id(item.text_b, catalog, own_text)
     if left and right:
         return f"{left} {right}".strip()
-    return left or right or f"Group {item.skupina}"
+    if left or right:
+        return left or right
+    # Title rows for circuits/TUV often use OwnText only; empty slots must not
+    # become "Group N" in Home Assistant (CWU is OwnText[4] → TUV).
+    if item.text_a >= AC16_OWN_TEXT_OFFSET:
+        slot = item.text_a - AC16_OWN_TEXT_OFFSET
+        if slot == 4:
+            return "TUV"
+        return f"Circuit {slot + 1}"
+    return f"Group {item.skupina}"
 
 
 def _row_for(item: InfoItem, catalog: TextLookup, own_text: Sequence[str]) -> InfoRow:
