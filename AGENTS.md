@@ -40,4 +40,4 @@ Keep `manifest.json` library pins aligned with `pyproject.toml`, and `hacs.json`
 
 ## Conventions
 
-English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Info value parts use `{entry_id}_g{skupina}_c{caption}` or `…_p{i}` when split. Circuit climate/numbers use `{entry_id}_circ{n}_…`. Child devices set `via_device_id` (HA `>=2026.8.0`).
+English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Info value parts use `{entry_id}_g{skupina}_c{caption}_p{i}` (always indexed; registry-remembered dual slots stay unavailable when the live dump has one half). Circuit climate/numbers use `{entry_id}_circ{n}_…`. Child devices set `via_device_id` (HA `>=2026.8.0`).

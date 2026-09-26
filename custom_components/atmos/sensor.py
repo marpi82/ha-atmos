@@ -18,8 +18,10 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from pyatmos_wg1000.protocol import InfoRowType, InfoValueKind
 
+from .const import DOMAIN
 from .entity import atmos_group_device_info, atmos_hub_device_info, ensure_group_device, ensure_hub_device
-from .info_map import MappedInfoPart, map_info_row
+from .info_map import MappedInfoPart, desired_part_slots, map_info_row, stub_mapped_part
+from .info_registry import registered_info_part_indices, remove_legacy_info_uid
 from .runtime import AtmosRuntime
 from .source import ActiveSource
 from .wiring import runtime_for
@@ -90,22 +92,32 @@ def _info_sensors(
     hub: object,
     known: set[tuple[int, int, int]],
 ) -> list[SensorEntity]:
-    """Build new typed Info sensors for parts not yet registered."""
-    registry = er.async_get(hass)
+    """Build new typed Info sensors for live parts and remembered registry slots."""
     added: list[SensorEntity] = []
     for group in runtime.info_groups:
         for row in group.rows:
             if row.typ not in _VALUE_TYPES:
                 continue
             mapped = map_info_row(row)
-            # Drop the pre-split string sensor when the row became multi-part or moved to binary_sensor.
-            if len(mapped) > 1 or any(part.part.kind is InfoValueKind.BINARY for part in mapped):
-                old_uid = f"{entry.entry_id}_g{row.skupina}_c{row.caption_id}"
-                if (entity_id := registry.async_get_entity_id("sensor", "atmos", old_uid)) is not None:
-                    registry.async_remove(entity_id)
-            for part in mapped:
-                if part.part.kind is InfoValueKind.BINARY:
-                    continue
+            remove_legacy_info_uid(hass, entry, row.skupina, row.caption_id, domain="sensor")
+            remembered = registered_info_part_indices(hass, entry, row.skupina, row.caption_id, domain="sensor")
+            # Also keep slots seen on the binary platform so part counts stay aligned.
+            remembered |= registered_info_part_indices(hass, entry, row.skupina, row.caption_id, domain="binary_sensor")
+            slots = desired_part_slots(len(mapped), remembered)
+            for index in range(slots):
+                if index < len(mapped):
+                    part = mapped[index]
+                    if part.part.kind is InfoValueKind.BINARY:
+                        continue
+                else:
+                    uid_suffix = f"g{row.skupina}_c{row.caption_id}_p{index}"
+                    full_uid = f"{entry.entry_id}_{uid_suffix}"
+                    registry = er.async_get(hass)
+                    if registry.async_get_entity_id("binary_sensor", DOMAIN, full_uid) is not None:
+                        continue
+                    if registry.async_get_entity_id("sensor", DOMAIN, full_uid) is None:
+                        continue
+                    part = stub_mapped_part(row, index, total_parts=slots)
                 key = (part.skupina, part.caption_id, part.part_index)
                 if key in known:
                     continue

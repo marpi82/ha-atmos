@@ -25,7 +25,7 @@ keywords = [
 ]
 dependencies = [
   "py-atmos-serial==2026.9.0a1",
-  "py-atmos-wg1000==2026.9.0b9",
+  "py-atmos-wg1000==2026.9.0b10",
 ]
 classifiers = [
   "Development Status :: 1 - Planning",
@@ -134,6 +134,7 @@ omit = [
   "custom_components/atmos/climate.py",
   "custom_components/atmos/number.py",
   "custom_components/atmos/entity.py",
+  "custom_components/atmos/info_registry.py",
 ]
 
 [tool.poe.tasks]

@@ -37,18 +37,17 @@ def test_map_slash_pair_inherits_unit_and_names() -> None:
     assert parts[0].part.unit_token == _CELSIUS
     assert parts[0].part.name == "Room temperature"
     assert parts[1].part.number == 21.3
-    assert parts[0].multi is True
     assert parts[0].unique_suffix.endswith("_p0")
+    assert parts[1].unique_suffix.endswith("_p1")
 
 
 def test_map_missing_temperature() -> None:
-    """Dashed missing reading keeps a temperature unit."""
+    """Dashed missing reading keeps a temperature unit; uid always uses _p0."""
     parts = map_info_row(_row(value=f"--- {_CELSIUS}", caption="Buffer", caption_id=1189))
     assert len(parts) == 1
     assert parts[0].part.kind is InfoValueKind.MISSING
     assert parts[0].part.unit_token == _CELSIUS
-    assert parts[0].multi is False
-    assert parts[0].unique_suffix == "g12_c1189"
+    assert parts[0].unique_suffix == "g12_c1189_p0"
 
 
 def test_map_info_groups_flattens_rows() -> None:
@@ -75,6 +74,46 @@ def test_paren_humidity_hint() -> None:
     parts = map_info_row(_row(value=f"19,7 {_CELSIUS} (65,9 {_PERCENT})", caption="Dom"))
     assert parts[1].humidity_hint is True
     assert parts[1].part.unit_token == _PERCENT
+
+
+def test_desired_part_slots_and_stub() -> None:
+    """Remembered registry indices keep absent dual slots; stubs stay missing."""
+    from custom_components.atmos.info_map import (
+        desired_part_slots,
+        info_part_uid_suffix,
+        part_indices_from_unique_ids,
+        stub_mapped_part,
+    )
+
+    assert desired_part_slots(1, ()) == 1
+    assert desired_part_slots(1, {0, 1}) == 2
+    assert desired_part_slots(2, {0}) == 2
+    assert info_part_uid_suffix(12, 1284, 1) == "g12_c1284_p1"
+    stub = stub_mapped_part(
+        _row(value=f"15,0 {_CELSIUS}", caption="Średnia temp. zewnętrz.", caption_id=1284),
+        1,
+        total_parts=2,
+    )
+    assert stub.part_index == 1
+    assert stub.part.kind is InfoValueKind.MISSING
+    assert stub.part.name == "Średnia temp. zewnętrz. (2)"
+    assert stub.unique_suffix == "g12_c1284_p1"
+    overflow = stub_mapped_part(_row(caption="Only", caption_id=1), 2, total_parts=1)
+    assert overflow.part.name == "Only (3)"
+    entry = "abc"
+    indices = part_indices_from_unique_ids(
+        entry,
+        12,
+        1284,
+        (
+            f"{entry}_g12_c1284",
+            f"{entry}_g12_c1284_p0",
+            f"{entry}_g12_c1284_p1",
+            f"{entry}_g12_c1284_pX",
+            f"{entry}_other",
+        ),
+    )
+    assert indices == {0, 1}
 
 
 def test_mode_row_device_and_tryb() -> None:
