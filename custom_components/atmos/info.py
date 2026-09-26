@@ -14,6 +14,8 @@ from pyatmos_wg1000.protocol import (
     resolve_text_id,
 )
 
+from .circuit import TUV_CATALOG_KEY
+
 # Home Assistant language codes → gateway table column codes.
 _HA_TO_GATEWAY: dict[str, str] = {
     "cs": "CES",
@@ -129,11 +131,12 @@ def _title_for(item: InfoItem, catalog: TextLookup, own_text: Sequence[str]) -> 
     if left or right:
         return left or right
     # Title rows for circuits/TUV often use OwnText only; empty slots must not
-    # become "Group N" in Home Assistant (CWU is OwnText[4] → TUV).
+    # become "Group N" in Home Assistant. Empty OwnText[4] uses catalog T16_94
+    # (POL=CWU, ENG=DHW, CES=TUV) then a hardcoded TUV fallback.
     if item.text_a >= AC16_OWN_TEXT_OFFSET:
         slot = item.text_a - AC16_OWN_TEXT_OFFSET
         if slot == 4:
-            return "TUV"
+            return catalog.text(TUV_CATALOG_KEY) or "TUV"
         return f"Circuit {slot + 1}"
     return f"Group {item.skupina}"
 
