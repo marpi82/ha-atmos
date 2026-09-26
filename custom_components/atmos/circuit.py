@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pyatmos_wg1000.protocol import (
     Hod16,
     ParamRecord,
+    TextLookup,
     decode_acd_quantity,
     decode_acd_temperature,
     decode_circuit_general,
@@ -19,6 +20,8 @@ from pyatmos_wg1000.protocol import (
 # O1..O4 then TUV — matches Pages.js homepage circuit order.
 CIRCUIT_COUNT = 5
 CIRCUIT_TUV = 4
+# texty_brana id 94: CES=TUV, ENG=DHW, POL=CWU (and peers).
+TUV_CATALOG_KEY = "T16_94"
 
 _OBECNE = (Hod16.O1_OBECNE, Hod16.O2_OBECNE, Hod16.O3_OBECNE, Hod16.O4_OBECNE, Hod16.TUV_OBECNE)
 _REZIM = (Hod16.O1_REZIM, Hod16.O2_REZIM, Hod16.O3_REZIM, Hod16.O4_REZIM, Hod16.TUV_REZIM)
@@ -79,17 +82,26 @@ def circuit_register_ids(*, device_ac16: int = 1) -> tuple[int, ...]:
     return tuple(ids)
 
 
-def resolve_circuit_name(index: int, own_text: Sequence[str]) -> str:
-    """Name a circuit from OwnText slots or a TUV fallback.
+def resolve_circuit_name(
+    index: int,
+    own_text: Sequence[str],
+    catalog: TextLookup | None = None,
+) -> str:
+    """Name a circuit from OwnText, then the catalog DHW label, then TUV.
 
     Args:
         index: Circuit index 0..4.
         own_text: OwnText slots from the gateway.
+        catalog: Language tables; used for empty OwnText[4] (``T16_94``).
     """
-    if index == CIRCUIT_TUV:
-        return "TUV"
     if 0 <= index < len(own_text) and own_text[index]:
         return own_text[index]
+    if index == CIRCUIT_TUV:
+        if catalog is not None:
+            label = catalog.text(TUV_CATALOG_KEY)
+            if label:
+                return label
+        return "TUV"
     return f"Circuit {index + 1}"
 
 
@@ -97,6 +109,7 @@ def circuits_from_records(
     records: Sequence[ParamRecord],
     *,
     own_text: Sequence[str] = (),
+    catalog: TextLookup | None = None,
     device_ac16: int = 1,
 ) -> tuple[CircuitState, ...]:
     """Build circuit snapshots from a PARAM read response.
@@ -104,6 +117,7 @@ def circuits_from_records(
     Args:
         records: Decoded parameter records.
         own_text: OwnText slots for circuit names.
+        catalog: Language tables for empty TUV/CWU OwnText.
         device_ac16: Device nibble used when packing ids.
     """
     from pyatmos_wg1000.protocol import Device
@@ -133,7 +147,7 @@ def circuits_from_records(
         states.append(
             CircuitState(
                 index=index,
-                name=resolve_circuit_name(index, own_text),
+                name=resolve_circuit_name(index, own_text, catalog),
                 active=general.active,
                 humidity_supported=general.humidity,
                 temp_type=general.temp_type,
@@ -156,6 +170,7 @@ __all__ = [
     "CIRCUIT_COUNT",
     "CIRCUIT_TUV",
     "SIMPLE_PRESETS",
+    "TUV_CATALOG_KEY",
     "CircuitState",
     "circuit_register_ids",
     "circuits_from_records",

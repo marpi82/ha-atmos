@@ -13,6 +13,7 @@ class _Catalog:
             "T16_1011": "Temperatury",
             "T16_1014": "AF - temp. zewnętrz.",
             "T16_1575": "AF",
+            "T16_94": "CWU",
         }.get(key)
 
 
@@ -51,13 +52,39 @@ def test_resolve_info_dump_builds_groups() -> None:
 
 
 def test_resolve_info_dump_empty_own_text_tuv_title() -> None:
-    """Empty OwnText[4] becomes TUV instead of Group 11."""
+    """Empty OwnText[4] uses catalog T16_94 (CWU) instead of Group 11."""
     dump = InfoDump(
         ac16=0,
         items=(InfoItem(typ=0, vzhled=0, skupina=11, text_a=0x8004, text_b=1614, caption=1614, value=b"\x00"),),
     )
     groups = resolve_info_dump(dump, _Catalog(), ("Dom", "Poddasze"))
+    assert groups[0].title == "CWU"
+
+
+def test_resolve_info_dump_empty_own_text_tuv_fallback() -> None:
+    """Missing catalog key falls back to TUV."""
+
+    class EmptyCatalog:
+        def text(self, key: str) -> str | None:
+            return None
+
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=11, text_a=0x8004, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    groups = resolve_info_dump(dump, EmptyCatalog(), ())
     assert groups[0].title == "TUV"
+
+
+def test_resolve_info_dump_own_text_overrides_catalog_tuv() -> None:
+    """Non-empty OwnText[4] wins over the catalog DHW label."""
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=11, text_a=0x8004, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    own = ("", "", "", "", "Bojler")
+    groups = resolve_info_dump(dump, _Catalog(), own)
+    assert groups[0].title == "Bojler"
 
 
 def test_resolve_info_dump_empty_own_text_circuit_title() -> None:

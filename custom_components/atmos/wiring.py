@@ -261,7 +261,7 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
     runtime.note_info_groups(resolve_info_dump(dump, catalog, own_text))
     try:
         records = await client.read_registers(circuit_register_ids())
-        runtime.note_circuits(circuits_from_records(records, own_text=own_text))
+        runtime.note_circuits(circuits_from_records(records, own_text=own_text, catalog=catalog))
     except Exception:
         LOGGER.exception("WG1000 circuit bootstrap failed")
     runtime.bind_write_registers(client.write_registers)
@@ -299,7 +299,7 @@ async def _pull_gateway(
                 runtime.note_info_groups(resolve_info_dump(update.dump, catalog, own_text))
                 try:
                     records = await client.read_registers(circuit_register_ids())
-                    runtime.note_circuits(circuits_from_records(records, own_text=own_text))
+                    runtime.note_circuits(circuits_from_records(records, own_text=own_text, catalog=catalog))
                 except Exception:
                     LOGGER.exception("WG1000 circuit poll failed")
 

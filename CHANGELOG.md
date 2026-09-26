@@ -8,18 +8,20 @@
 - Split Info display strings into typed sensors / binary sensors / valve enums; `---` → unknown.
 - Add homepage circuit `climate` + comfort/reduced `number` entities (PARAM HOD16 read/write).
 - Expose all eight `Regime_menu` climate presets (holiday…standby) with gateway-language translations.
-- Require `py-atmos-wg1000==2026.9.0b8`.
+- Require `py-atmos-wg1000==2026.9.0b9`.
 
 ### Fixed
 
 - Info mode rows: device title shows effective regime (``Komfort`` / ``Standby``),
-  ``Tryb`` holds the selection (``Auto`` or the same bare value).
+  ``Tryb`` holds the selection (``Auto`` or the same bare value); TextA wins over
+  OwnText circuit captions.
 - Clear stale entity-registry name overrides so renamed Info parts (e.g. frozen
   ``Tryb (1)``) pick up library names after update.
 - Single-word statuses (``Dozwolone``) stay under the panel caption; binary duals
   keep the caption (no entity named ``OFF``).
-- Dashed captions keep the full panel head; empty OwnText group titles
-  (e.g. CWU → ``TUV``) stay fixed as in ``b5``/``b6``.
+- Dashed captions keep the full panel head; empty OwnText[4] / TUV titles use
+  LanguageCatalog ``T16_94`` (``CWU`` / ``DHW`` / ``TUV``) before a hardcoded
+  ``TUV`` fallback.
 
 ## [2026.9.0a3] - 2026-09-25
 

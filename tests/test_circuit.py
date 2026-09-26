@@ -20,8 +20,15 @@ from custom_components.atmos.circuit import (
 
 
 def test_resolve_circuit_name_own_text_and_tuv() -> None:
-    """OwnText names circuits; TUV is a fixed label."""
+    """OwnText names circuits; empty TUV slot uses catalog then TUV."""
+
+    class Catalog:
+        def text(self, key: str) -> str | None:
+            return {"T16_94": "CWU"}.get(key)
+
     assert resolve_circuit_name(0, ("Dom", "Poddasze")) == "Dom"
+    assert resolve_circuit_name(4, ("Dom",), Catalog()) == "CWU"
+    assert resolve_circuit_name(4, ("Dom", "Poddasze", "", "", "Bojler"), Catalog()) == "Bojler"
     assert resolve_circuit_name(4, ("Dom",)) == "TUV"
     assert resolve_circuit_name(2, ()) == "Circuit 3"
 
