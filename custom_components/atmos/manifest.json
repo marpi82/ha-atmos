@@ -7,6 +7,6 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/marpi82/ha-atmos/issues",
   "loggers": ["custom_components.atmos", "pyatmos_serial", "pyatmos_wg1000"],
-  "requirements": ["py-atmos-serial==2026.9.0a1", "py-atmos-wg1000==2026.9.0b3"],
-  "version": "2026.9.0a3"
+  "requirements": ["py-atmos-serial==2026.9.0a1", "py-atmos-wg1000==2026.9.0b4"],
+  "version": "2026.9.0a4"
 }

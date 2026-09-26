@@ -108,6 +108,29 @@
       "serial_link": {
         "name": "RS485 link"
       }
+    },
+    "climate": {
+      "circuit": {
+        "name": "Thermostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "comfort": "Comfort",
+              "reduced": "Reduced",
+              "auto": "Auto",
+              "standby": "Standby"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Comfort setpoint"
+      },
+      "setpoint_reduced": {
+        "name": "Reduced setpoint"
+      }
     }
   }
 }

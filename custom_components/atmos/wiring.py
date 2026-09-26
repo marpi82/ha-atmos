@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from pyatmos_wg1000 import AtmosClient, InfoFeed, LanguageCatalog
 
+from .circuit import circuit_register_ids, circuits_from_records
 from .const import (
     CONF_FALLBACK_AFTER,
     CONF_LANGUAGE,
@@ -258,15 +259,22 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
 
     runtime.language = language or catalog.language.code
     runtime.note_info_groups(resolve_info_dump(dump, catalog, own_text))
+    try:
+        records = await client.read_registers(circuit_register_ids())
+        runtime.note_circuits(circuits_from_records(records, own_text=own_text))
+    except Exception:
+        LOGGER.exception("WG1000 circuit bootstrap failed")
+    runtime.bind_write_registers(client.write_registers)
 
     pull = asyncio.create_task(
-        _pull_info(client, runtime, catalog, own_text),
-        name="atmos-wg1000-info",
+        _pull_gateway(client, runtime, catalog, own_text),
+        name="atmos-wg1000-poll",
     )
 
     async def _close_gateway() -> None:
         pull.cancel()
         await _await_cancelled(pull)
+        runtime.bind_write_registers(None)
         with suppress(Exception):
             await client.logout()
         await client.aclose()
@@ -276,22 +284,27 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
     return True
 
 
-async def _pull_info(
+async def _pull_gateway(
     client: AtmosClient,
     runtime: AtmosRuntime,
     catalog: LanguageCatalog,
     own_text: tuple[str, ...],
 ) -> None:
-    """Poll Info dumps and bridge resolved groups into the runtime."""
+    """Poll Info dumps and homepage circuit registers into the runtime."""
     try:
         feed = InfoFeed(client, interval=DEFAULT_POLL_INTERVAL)
 
         async def _bridge() -> None:
             async for update in feed.bus.subscribe():
                 runtime.note_info_groups(resolve_info_dump(update.dump, catalog, own_text))
+                try:
+                    records = await client.read_registers(circuit_register_ids())
+                    runtime.note_circuits(circuits_from_records(records, own_text=own_text))
+                except Exception:
+                    LOGGER.exception("WG1000 circuit poll failed")
 
-        bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-info-bridge")
-        LOGGER.info("WG1000 Info poll started (language=%s)", catalog.language.code)
+        bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-bridge")
+        LOGGER.info("WG1000 Info+circuit poll started (language=%s)", catalog.language.code)
         try:
             await feed.run()
         finally:
@@ -300,7 +313,7 @@ async def _pull_info(
     except asyncio.CancelledError:
         raise
     except Exception:
-        LOGGER.exception("WG1000 Info poll stopped")
+        LOGGER.exception("WG1000 poll stopped")
         runtime.set_gateway_open(False)
         raise
 
