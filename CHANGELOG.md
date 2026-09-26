@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [2026.9.0a6] - 2026-09-26
+
+### Changed
+
+- Require `py-atmos-wg1000==2026.9.0b10`.
+- Info value ``unique_id`` values always use ``_p{i}``; once a dual part has
+  appeared it is recreated after restart and stays unavailable when the live
+  dump has fewer halves.
+
+### Fixed
+
+- Mixed Info duals (``°C / Tryb letni``) keep both entities under the panel
+  caption instead of ``Tryb letni: Tryb letni``.
+- Transition from one to two Info parts no longer drops the first entity
+  (``known`` + legacy bare ``unique_id``).
+
 ## [2026.9.0a5] - 2026-09-26
 
 ### Changed

@@ -10,8 +10,10 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from pyatmos_wg1000.protocol import InfoRowType, InfoValueKind
 
+from .const import DOMAIN
 from .entity import atmos_device_info, atmos_group_device_info, ensure_group_device, ensure_hub_device
-from .info_map import MappedInfoPart, map_info_row
+from .info_map import MappedInfoPart, desired_part_slots, map_info_row, stub_mapped_part
+from .info_registry import registered_info_part_indices, remove_legacy_info_uid
 from .runtime import AtmosRuntime
 from .source import ActiveSource
 from .wiring import runtime_for
@@ -38,7 +40,7 @@ async def async_setup_entry(
 
     hub = ensure_hub_device(hass, entry, runtime)
     known: set[tuple[int, int, int]] = set()
-    entities.extend(_info_binary_sensors(entry, runtime, hub.id, known))
+    entities.extend(_info_binary_sensors(hass, entry, runtime, hub.id, known))
     if entities:
         async_add_entities(entities)
 
@@ -53,7 +55,7 @@ async def async_setup_entry(
                 title=group.title,
                 hub=hub,
             )
-        added = _info_binary_sensors(entry, runtime, hub.id, known)
+        added = _info_binary_sensors(hass, entry, runtime, hub.id, known)
         if added:
             async_add_entities(added)
 
@@ -61,21 +63,38 @@ async def async_setup_entry(
 
 
 def _info_binary_sensors(
+    hass: HomeAssistant,
     entry: ConfigEntry,
     runtime: AtmosRuntime,
     via_device_id: str,
     known: set[tuple[int, int, int]],
 ) -> list[BinarySensorEntity]:
-    """Build ON/OFF Info parts not yet registered."""
+    """Build ON/OFF Info parts for live values and remembered registry slots."""
     added: list[BinarySensorEntity] = []
     titles = {group.skupina: group.title for group in runtime.info_groups}
     for group in runtime.info_groups:
         for row in group.rows:
             if row.typ not in _VALUE_TYPES:
                 continue
-            for part in map_info_row(row):
-                if part.part.kind is not InfoValueKind.BINARY:
-                    continue
+            mapped = map_info_row(row)
+            remove_legacy_info_uid(hass, entry, row.skupina, row.caption_id, domain="binary_sensor")
+            remembered = registered_info_part_indices(hass, entry, row.skupina, row.caption_id, domain="binary_sensor")
+            remembered |= registered_info_part_indices(hass, entry, row.skupina, row.caption_id, domain="sensor")
+            slots = desired_part_slots(len(mapped), remembered)
+            for index in range(slots):
+                if index < len(mapped):
+                    part = mapped[index]
+                    if part.part.kind is not InfoValueKind.BINARY:
+                        continue
+                else:
+                    uid_suffix = f"g{row.skupina}_c{row.caption_id}_p{index}"
+                    full_uid = f"{entry.entry_id}_{uid_suffix}"
+                    registry = er.async_get(hass)
+                    if registry.async_get_entity_id("sensor", DOMAIN, full_uid) is not None:
+                        continue
+                    if registry.async_get_entity_id("binary_sensor", DOMAIN, full_uid) is None:
+                        continue
+                    part = stub_mapped_part(row, index, total_parts=slots)
                 key = (part.skupina, part.caption_id, part.part_index)
                 if key in known:
                     continue
