@@ -55,6 +55,13 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
+          # Sibling checkouts exist only so uv path deps resolve; their own
+          # repos run CodeQL. Analyzing them here duplicates (and drifts from)
+          # library alerts.
+          config: |
+            paths-ignore:
+              - py-atmos-serial
+              - py-atmos-wg1000
 
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
