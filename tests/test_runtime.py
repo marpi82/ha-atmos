@@ -71,4 +71,5 @@ async def test_watch_notifies_once_when_the_window_expires() -> None:
     await asyncio.sleep(0.15)
     stop.set()
     await watch
+    assert watch.done()
     assert ActiveSource.WG1000 in seen
