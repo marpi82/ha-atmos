@@ -14,6 +14,8 @@
 
 - Info mode rows: device title shows effective regime (``Komfort`` / ``Standby``),
   ``Tryb`` holds the selection (``Auto`` or the same bare value).
+- Clear stale entity-registry name overrides so renamed Info parts (e.g. frozen
+  ``Tryb (1)``) pick up library names after update.
 - Single-word statuses (``Dozwolone``) stay under the panel caption; binary duals
   keep the caption (no entity named ``OFF``).
 - Dashed captions keep the full panel head; empty OwnText group titles
