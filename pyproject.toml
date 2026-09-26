@@ -25,7 +25,7 @@ keywords = [
 ]
 dependencies = [
   "py-atmos-serial==2026.9.0a1",
-  "py-atmos-wg1000==2026.9.0b3",
+  "py-atmos-wg1000==2026.9.0b4",
 ]
 classifiers = [
   "Development Status :: 1 - Planning",
@@ -131,6 +131,8 @@ omit = [
   "custom_components/atmos/wiring.py",
   "custom_components/atmos/sensor.py",
   "custom_components/atmos/binary_sensor.py",
+  "custom_components/atmos/climate.py",
+  "custom_components/atmos/number.py",
   "custom_components/atmos/entity.py",
 ]
 

@@ -191,7 +191,7 @@ jobs:
 
             ## Requirements
             - Python >= 3.13.2
-            - Home Assistant >= 2026.3.0
+            - Home Assistant >= 2026.8.0
             - `py-atmos-serial` and `py-atmos-wg1000` from PyPI (pinned in `manifest.json`)
           draft: false
           prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}

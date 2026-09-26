@@ -4,8 +4,10 @@
 
 ### Changed
 
-- Rebuild WG1000 entities from the Info page dump (groups, OwnText names, gateway language).
-- Require `py-atmos-wg1000==2026.9.0b3`.
+- Require Home Assistant `>=2026.8.0` (`via_device_id` only; no `via_device` fallback).
+- Split Info display strings into typed sensors / binary sensors / valve enums; `---` → unknown.
+- Add homepage circuit `climate` + comfort/reduced `number` entities (PARAM HOD16 read/write).
+- Require `py-atmos-wg1000==2026.9.0b4`.
 
 ## [2026.9.0a3] - 2026-09-25
 

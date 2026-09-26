@@ -7,20 +7,26 @@ from typing import ClassVar
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from pyatmos_wg1000.protocol import InfoRowType
+from pyatmos_wg1000.protocol import InfoRowType, InfoValueKind
 
-from .entity import atmos_group_device_info, atmos_hub_device_info
-from .info import InfoGroup
+from .entity import atmos_group_device_info, atmos_hub_device_info, ensure_group_device, ensure_hub_device
+from .info_map import MappedInfoPart, map_info_row
 from .runtime import AtmosRuntime
 from .source import ActiveSource
 from .wiring import runtime_for
 
 _SCAN = timedelta(seconds=30)
 _VALUE_TYPES = {int(InfoRowType.LONG), int(InfoRowType.SHORT)}
+_VALVE_OPTIONS = ["open", "stop", "close"]
 
 
 async def async_setup_entry(
@@ -36,20 +42,21 @@ async def async_setup_entry(
         async_add_entities: Home Assistant entity registrar.
     """
     runtime = runtime_for(hass, entry)
+    hub = ensure_hub_device(hass, entry, runtime)
     entities: list[SensorEntity] = [AtmosActiveSourceSensor(entry, runtime)]
     if runtime.config.serial:
         entities.append(AtmosSerialBytesSensor(entry, runtime))
 
-    known: set[tuple[int, int]] = set()
+    known: set[tuple[int, int, int]] = set()
     known_groups: set[int] = set()
-    _register_info_groups(hass, entry, runtime, runtime.info_groups, known_groups)
-    entities.extend(_info_sensors(entry, runtime, runtime.info_groups, known))
+    _register_info_groups(hass, entry, runtime, hub, known_groups)
+    entities.extend(_info_sensors(hass, entry, runtime, hub, known))
     async_add_entities(entities)
 
     @callback
     def _discover() -> None:
-        _register_info_groups(hass, entry, runtime, runtime.info_groups, known_groups)
-        added = _info_sensors(entry, runtime, runtime.info_groups, known)
+        _register_info_groups(hass, entry, runtime, hub, known_groups)
+        added = _info_sensors(hass, entry, runtime, hub, known)
         if added:
             async_add_entities(added)
 
@@ -60,52 +67,59 @@ def _register_info_groups(
     hass: HomeAssistant,
     entry: ConfigEntry,
     runtime: AtmosRuntime,
-    groups: tuple[InfoGroup, ...] | list[InfoGroup],
+    hub: object,
     known_groups: set[int],
 ) -> None:
     """Ensure every Info ``skupina`` has a child device, even without value rows."""
-    registry = dr.async_get(hass)
-    for group in groups:
-        info = atmos_group_device_info(entry, runtime, skupina=group.skupina, title=group.title)
-        registry.async_get_or_create(config_entry_id=entry.entry_id, **info)
+    for group in runtime.info_groups:
+        ensure_group_device(
+            hass,
+            entry,
+            runtime,
+            skupina=group.skupina,
+            title=group.title,
+            hub=hub,  # type: ignore[arg-type]
+        )
         known_groups.add(group.skupina)
 
 
 def _info_sensors(
+    hass: HomeAssistant,
     entry: ConfigEntry,
     runtime: AtmosRuntime,
-    groups: tuple[InfoGroup, ...] | list[InfoGroup],
-    known: set[tuple[int, int]],
+    hub: object,
+    known: set[tuple[int, int, int]],
 ) -> list[SensorEntity]:
-    """Build new value sensors for long/short Info rows not yet registered."""
+    """Build new typed Info sensors for parts not yet registered."""
+    registry = er.async_get(hass)
     added: list[SensorEntity] = []
-    for group in groups:
+    for group in runtime.info_groups:
         for row in group.rows:
             if row.typ not in _VALUE_TYPES:
                 continue
-            key = (row.skupina, row.caption_id)
-            if key in known:
-                continue
-            known.add(key)
-            added.append(
-                AtmosInfoSensor(
-                    entry,
-                    runtime,
-                    skupina=row.skupina,
-                    caption_id=row.caption_id,
-                    group_title=group.title,
-                    name=_entity_name(row.caption, row.text_a, row.text_b),
+            mapped = map_info_row(row)
+            # Drop the pre-split string sensor when the row became multi-part or moved to binary_sensor.
+            if len(mapped) > 1 or any(part.part.kind is InfoValueKind.BINARY for part in mapped):
+                old_uid = f"{entry.entry_id}_g{row.skupina}_c{row.caption_id}"
+                if (entity_id := registry.async_get_entity_id("sensor", "atmos", old_uid)) is not None:
+                    registry.async_remove(entity_id)
+            for part in mapped:
+                if part.part.kind is InfoValueKind.BINARY:
+                    continue
+                key = (part.skupina, part.caption_id, part.part_index)
+                if key in known:
+                    continue
+                known.add(key)
+                added.append(
+                    AtmosInfoValueSensor(
+                        entry,
+                        runtime,
+                        mapped=part,
+                        group_title=group.title,
+                        via_device_id=hub.id,  # type: ignore[attr-defined]
+                    )
                 )
-            )
     return added
-
-
-def _entity_name(caption: str, text_a: str, text_b: str) -> str:
-    if caption:
-        return caption
-    if text_a and text_b:
-        return f"{text_a} / {text_b}"
-    return text_a or text_b or "Info"
 
 
 class AtmosActiveSourceSensor(SensorEntity):
@@ -147,8 +161,8 @@ class AtmosActiveSourceSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-class AtmosInfoSensor(SensorEntity):
-    """One Info page value row as a gateway display string."""
+class AtmosInfoValueSensor(SensorEntity):
+    """One typed part of an Info page value row."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -158,37 +172,88 @@ class AtmosInfoSensor(SensorEntity):
         entry: ConfigEntry,
         runtime: AtmosRuntime,
         *,
-        skupina: int,
-        caption_id: int,
+        mapped: MappedInfoPart,
         group_title: str,
-        name: str,
+        via_device_id: str,
     ) -> None:
-        """Bind one Info row to this config entry."""
+        """Bind one Info value part to this config entry."""
         self._entry = entry
         self._runtime = runtime
-        self._skupina = skupina
-        self._caption_id = caption_id
-        self._attr_name = name
-        self._attr_unique_id = f"{entry.entry_id}_g{skupina}_c{caption_id}"
+        self._mapped = mapped
+        self._via_device_id = via_device_id
+        self._attr_name = mapped.part.name
+        self._attr_unique_id = f"{entry.entry_id}_{mapped.unique_suffix}"
         self._attr_device_info = atmos_group_device_info(
             entry,
             runtime,
-            skupina=skupina,
+            skupina=mapped.skupina,
             title=group_title,
+            via_device_id=via_device_id,
         )
+        self._apply_typing(mapped)
+
+    def _apply_typing(self, mapped: MappedInfoPart) -> None:
+        part = mapped.part
+        self._attr_device_class = None
+        self._attr_state_class = None
+        self._attr_native_unit_of_measurement = None
+        self._attr_options = None
+        if part.kind is InfoValueKind.VALVE:
+            self._attr_device_class = SensorDeviceClass.ENUM
+            self._attr_options = list(_VALVE_OPTIONS)
+            return
+        if part.kind in (InfoValueKind.NUMBER, InfoValueKind.MISSING):
+            unit = part.unit_token
+            if unit == "°C":
+                self._attr_device_class = SensorDeviceClass.TEMPERATURE
+                self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+            elif unit == "%":
+                self._attr_native_unit_of_measurement = PERCENTAGE
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+                if mapped.humidity_hint:
+                    self._attr_device_class = SensorDeviceClass.HUMIDITY
+            elif unit == "h":
+                self._attr_device_class = SensorDeviceClass.DURATION
+                self._attr_native_unit_of_measurement = UnitOfTime.HOURS
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+            elif unit == "min":
+                self._attr_device_class = SensorDeviceClass.DURATION
+                self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+            elif unit == "x":
+                self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    def _current(self) -> MappedInfoPart | None:
+        row = self._runtime.info_row(self._mapped.skupina, self._mapped.caption_id)
+        if row is None:
+            return None
+        parts = map_info_row(row)
+        if self._mapped.part_index >= len(parts):
+            return None
+        return parts[self._mapped.part_index]
 
     @property
     def available(self) -> bool:
-        """Available while WG1000 owns state and this row exists."""
+        """Available while WG1000 owns state and this part exists."""
         if self._runtime.active_source() is not ActiveSource.WG1000:
             return False
-        return self._runtime.info_row(self._skupina, self._caption_id) is not None
+        return self._current() is not None
 
     @property
-    def native_value(self) -> str | None:
-        """Return the gateway display string for this row."""
-        row = self._runtime.info_row(self._skupina, self._caption_id)
-        return None if row is None else row.value
+    def native_value(self) -> float | str | None:
+        """Return the typed value, or ``None`` when missing (``---``)."""
+        current = self._current()
+        if current is None:
+            return None
+        part = current.part
+        if part.kind is InfoValueKind.MISSING:
+            return None
+        if part.kind is InfoValueKind.NUMBER:
+            return part.number
+        if part.kind is InfoValueKind.VALVE:
+            return part.valve
+        return part.text if part.text is not None else part.raw
 
     async def async_added_to_hass(self) -> None:
         """Refresh when the runtime stores a new Info dump."""
@@ -196,17 +261,20 @@ class AtmosInfoSensor(SensorEntity):
 
     @callback
     def _refresh(self) -> None:
-        title = self._runtime.group_title(self._skupina)
+        title = self._runtime.group_title(self._mapped.skupina)
         if title is not None:
             self._attr_device_info = atmos_group_device_info(
                 self._entry,
                 self._runtime,
-                skupina=self._skupina,
+                skupina=self._mapped.skupina,
                 title=title,
+                via_device_id=self._via_device_id,
             )
-        row = self._runtime.info_row(self._skupina, self._caption_id)
-        if row is not None:
-            self._attr_name = _entity_name(row.caption, row.text_a, row.text_b)
+        current = self._current()
+        if current is not None:
+            self._mapped = current
+            self._attr_name = current.part.name
+            self._apply_typing(current)
         self.async_write_ha_state()
 
 

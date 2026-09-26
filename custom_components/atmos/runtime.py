@@ -7,6 +7,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable, Sequence
 
+from .circuit import CircuitState
 from .info import InfoGroup, InfoRow
 from .source import ActiveSource, SourceConfig, choose_source
 
@@ -30,6 +31,8 @@ class AtmosRuntime:
         self._serial_values: dict[int, int] = {}
         self._info_groups: tuple[InfoGroup, ...] = ()
         self._info_rows: dict[tuple[int, int], InfoRow] = {}
+        self._circuits: tuple[CircuitState, ...] = ()
+        self._write_registers: Callable[[Sequence[tuple[int, int]]], Awaitable[object]] | None = None
         self._listeners: list[Callable[[], None]] = []
         self._closers: list[Callable[[], Awaitable[None]]] = []
         self._stale_emitted = False
@@ -48,6 +51,22 @@ class AtmosRuntime:
     def info_groups(self) -> tuple[InfoGroup, ...]:
         """Return the last resolved Info groups (empty until the first dump)."""
         return self._info_groups
+
+    @property
+    def circuits(self) -> tuple[CircuitState, ...]:
+        """Return the last homepage circuit snapshots."""
+        return self._circuits
+
+    def bind_write_registers(
+        self,
+        writer: Callable[[Sequence[tuple[int, int]]], Awaitable[object]] | None,
+    ) -> None:
+        """Attach the live gateway write callable (or clear it on teardown).
+
+        Args:
+            writer: ``AtmosClient.write_registers`` bound for this session.
+        """
+        self._write_registers = writer
 
     def add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
         """Register ``listener`` and return an unsubscribe callable.
@@ -128,6 +147,15 @@ class AtmosRuntime:
         self._info_rows = rows
         self._emit()
 
+    def note_circuits(self, circuits: Sequence[CircuitState]) -> None:
+        """Replace the homepage circuit snapshot and notify listeners.
+
+        Args:
+            circuits: Decoded circuit states from the latest PARAM poll.
+        """
+        self._circuits = tuple(circuits)
+        self._emit()
+
     def info_row(self, skupina: int, caption_id: int) -> InfoRow | None:
         """Return one Info value row, or ``None`` when missing.
 
@@ -147,6 +175,31 @@ class AtmosRuntime:
             if group.skupina == skupina:
                 return group.title
         return None
+
+    def circuit(self, index: int) -> CircuitState | None:
+        """Return one homepage circuit snapshot, or ``None``.
+
+        Args:
+            index: Circuit index 0..4 (O1..O4, TUV).
+        """
+        for item in self._circuits:
+            if item.index == index:
+                return item
+        return None
+
+    async def write_registers(self, pairs: Sequence[tuple[int, int]]) -> None:
+        """Write PARAM registers through the bound gateway session.
+
+        Args:
+            pairs: ``(register_id, value)`` tuples.
+
+        Raises:
+            RuntimeError: No gateway write binding is available.
+        """
+        writer = self._write_registers
+        if writer is None:
+            raise RuntimeError("WG1000 write path is not available")
+        await writer(pairs)
 
     def active_source(self, *, now: float | None = None) -> ActiveSource:
         """Return the transport that owns state at ``now``.

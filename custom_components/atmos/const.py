@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "atmos"
-PLATFORMS: Final[list[str]] = ["sensor", "binary_sensor"]
+PLATFORMS: Final[list[str]] = ["sensor", "binary_sensor", "climate", "number"]
 
 CONF_SERIAL_PORT: Final = "serial_port"
 CONF_SERIAL_BAUDRATE: Final = "serial_baudrate"

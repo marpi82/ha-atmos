@@ -6,7 +6,7 @@ Home Assistant custom integration for ATMOS boilers. Today the live path is the 
 
 - **Domain**: `atmos`, package `custom_components/atmos/`.
 - **Libraries**: `py-atmos-wg1000` (pull, poll) is active. `py-atmos-serial` stays pinned for a future RS485 listen path but is not offered in the config flow yet.
-- **Home Assistant**: `2026.3.0` (`hacs.json`).
+- **Home Assistant**: `2026.8.0` (`hacs.json`) — required for `DeviceInfo.via_device_id` (no `via_device` fallback).
 - **iot_class**: `local_push`. WG1000 still polls inside the integration; entities themselves do not poll, except the RS485 byte counter when serial is configured.
 - **HACS**: `hacs.json` + `hacs/action` workflow. Releases: `scripts/release.sh` tags the current branch; GitHub Actions builds `ha-atmos-hacs.zip` via `.github/workflows/release.yml`. Bump `manifest.json` `"version"` to the exact tag before tagging.
 
@@ -34,10 +34,10 @@ uv run --group dev --group test poe validate
 
 CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `HACS Validation`, `build`.
 
-`source.py`, `runtime.py`, and `info.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
+`source.py`, `runtime.py`, `info.py`, `info_map.py`, and `circuit.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
 
 Keep `manifest.json` library pins aligned with `pyproject.toml`, and `hacs.json` HA minimum aligned with docs (manifest has no HA version field).
 
 ## Conventions
 
-English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Info value sensors use `{entry_id}_g{skupina}_c{caption}`.
+English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Info value parts use `{entry_id}_g{skupina}_c{caption}` or `…_p{i}` when split. Circuit climate/numbers use `{entry_id}_circ{n}_…`. Child devices set `via_device_id` (HA `>=2026.8.0`).

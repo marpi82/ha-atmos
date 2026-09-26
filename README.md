@@ -5,17 +5,16 @@
 [![HACS](https://img.shields.io/github/actions/workflow/status/marpi82/ha-atmos/hacs.yml?branch=main&label=HACS)](https://github.com/marpi82/ha-atmos/actions/workflows/hacs.yml)
 [![Codecov](https://codecov.io/gh/marpi82/ha-atmos/graph/badge.svg)](https://codecov.io/gh/marpi82/ha-atmos)
 [![License](https://img.shields.io/github/license/marpi82/ha-atmos)](https://github.com/marpi82/ha-atmos/blob/main/LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-%E2%89%A52026.3.0-blue)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-%E2%89%A52026.8.0-blue)](https://www.home-assistant.io/)
 
 Home Assistant custom integration for an ATMOS boiler. It can use a passive
 RS485 listen (`py-atmos-serial`), the local WG1000 WebSocket
 (`py-atmos-wg1000`), or both.
 
-**Status:** WG1000 poll path is live for outdoor / circuit / DHW temperatures,
-humidity, and comfort/reduced setpoints. RS485 listen stays pinned as a
-dependency but is hidden in the config flow until the serial codec exists.
-There are no pump or mixing-valve entities yet (status words need more reverse
-engineering in `py-atmos-wg1000`).
+**Status:** WG1000 Info page values become typed sensors / binary sensors
+(including dual `a / b` rows). Homepage circuits expose `climate` plus
+comfort/reduced `number` setpoints via PARAM HOD16. RS485 listen stays pinned
+as a dependency but is hidden in the config flow until the serial codec exists.
 
 
 ## How the two paths combine
@@ -23,7 +22,7 @@ engineering in `py-atmos-wg1000`).
 | Configured | What runs | Entity values |
 | --- | --- | --- |
 | RS485 only | Passive listen (push). The port is read continuously. | Serial, once a frame decodes. Today that never happens. |
-| WG1000 only | Login, then poll (pull). The gateway does not push. | WG1000, once register ids exist. The poll loop is idle until then. |
+| WG1000 only | Login, then poll Info + homepage circuit registers. | WG1000 Info entities and circuit climate/numbers. |
 | Both | Listen and stay logged in to the gateway. | Serial while a **decoded** sample is newer than the fallback window (default 120 s). Otherwise WG1000. |
 
 Raw bytes do not make serial "fresh". Until the codec exists, a dual setup
@@ -35,8 +34,8 @@ Diagnostic entities:
 * **Active source** — `serial`, `wg1000`, or `none`
 * **RS485 link** / **RS485 bytes seen** — only when an entry still configures serial
 
-WG1000 value sensors (decoded with the library helpers): outdoor and circuit/DHW
-temperatures, humidity, and comfort/reduced setpoints.
+WG1000 entities: Info page values (per `skupina` child device), plus one
+circuit device each for O1–O4 / TUV with climate and setpoint numbers.
 
 ## Installation
 
@@ -77,8 +76,8 @@ uv sync --locked --group dev --group test
 uv run --group dev --group test poe validate
 ```
 
-Python matches the sibling libraries. Home Assistant minimum is `2026.3.0`
-(`hacs.json`).
+Python matches the sibling libraries. Home Assistant minimum is `2026.8.0`
+(`hacs.json`; needed for `via_device_id` in the device registry).
 
 ## Contributions are welcome!
 
