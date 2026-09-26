@@ -8,14 +8,15 @@
 - Split Info display strings into typed sensors / binary sensors / valve enums; `---` → unknown.
 - Add homepage circuit `climate` + comfort/reduced `number` entities (PARAM HOD16 read/write).
 - Expose all eight `Regime_menu` climate presets (holiday…standby) with gateway-language translations.
-- Require `py-atmos-wg1000==2026.9.0b6`.
+- Require `py-atmos-wg1000==2026.9.0b7`.
 
 ### Fixed
 
-- Info dual-row names: dashed captions keep the full panel head
-  (``Siłow. RLA3O / RLA3Z - pozycja`` / ``… - ruch``); mixed number/text and
-  ``Auto(comfort)`` mode pairs get readable part names; abbreviated halves and
-  empty OwnText group titles (e.g. CWU → ``TUV``) stay fixed as in ``b5``.
+- Info mode rows: ``Tryb`` + effective mode (``Komfort`` / ``Standby``); bare
+  regime values expand to two sensors; binary duals keep the panel caption
+  (no entity named ``OFF``).
+- Dashed captions keep the full panel head; abbreviated halves and empty
+  OwnText group titles (e.g. CWU → ``TUV``) stay fixed as in ``b5``/``b6``.
 
 ## [2026.9.0a3] - 2026-09-25
 
