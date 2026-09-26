@@ -6,6 +6,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from pyatmos_wg1000.protocol import InfoRowType, InfoValueKind
 
@@ -156,6 +157,16 @@ class AtmosInfoBinarySensor(BinarySensorEntity):
             via_device_id=via_device_id,
         )
 
+    def _set_part_name(self, name: str | None) -> None:
+        """Apply the library name and drop a stale entity-registry override."""
+        self._attr_name = name or None
+        if not self.hass:
+            return
+        registry = er.async_get(self.hass)
+        entry = registry.async_get(self.entity_id)
+        if entry is not None and entry.name is not None:
+            registry.async_update_entity(self.entity_id, name=None)
+
     def _current(self) -> MappedInfoPart | None:
         row = self._runtime.info_row(self._mapped.skupina, self._mapped.caption_id)
         if row is None:
@@ -185,6 +196,7 @@ class AtmosInfoBinarySensor(BinarySensorEntity):
 
     async def async_added_to_hass(self) -> None:
         """Refresh when the runtime stores a new Info dump."""
+        self._set_part_name(self._mapped.part.name)
         self.async_on_remove(self._runtime.add_listener(self._refresh))
 
     @callback
@@ -201,5 +213,5 @@ class AtmosInfoBinarySensor(BinarySensorEntity):
         current = self._current()
         if current is not None:
             self._mapped = current
-            self._attr_name = current.part.name or None
+            self._set_part_name(current.part.name)
         self.async_write_ha_state()
