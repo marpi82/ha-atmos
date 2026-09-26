@@ -75,3 +75,17 @@ def test_paren_humidity_hint() -> None:
     parts = map_info_row(_row(value=f"19,7 {_CELSIUS} (65,9 {_PERCENT})", caption="Dom"))
     assert parts[1].humidity_hint is True
     assert parts[1].part.unit_token == _PERCENT
+
+
+def test_mode_row_device_and_tryb() -> None:
+    """Regime rows: nameless effective mode + caption selection."""
+    auto = map_info_row(_row(value="Auto (Komfort)", caption="Tryb", caption_id=99))
+    assert auto[0].part.name == ""
+    assert auto[0].part.raw == "Komfort"
+    assert auto[1].part.name == "Tryb"
+    assert auto[1].part.raw == "Auto"
+    bare = map_info_row(_row(value="Standby", caption="Tryb", caption_id=100))
+    assert bare[0].part.name == ""
+    assert bare[0].part.raw == "Standby"
+    assert bare[1].part.name == "Tryb"
+    assert bare[1].part.raw == "Standby"
