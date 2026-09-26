@@ -146,7 +146,7 @@ class AtmosInfoBinarySensor(BinarySensorEntity):
         self._runtime = runtime
         self._mapped = mapped
         self._via_device_id = via_device_id
-        self._attr_name = mapped.part.name
+        self._attr_name = mapped.part.name or None
         self._attr_unique_id = f"{entry.entry_id}_{mapped.unique_suffix}"
         self._attr_device_info = atmos_group_device_info(
             entry,
@@ -201,5 +201,5 @@ class AtmosInfoBinarySensor(BinarySensorEntity):
         current = self._current()
         if current is not None:
             self._mapped = current
-            self._attr_name = current.part.name
+            self._attr_name = current.part.name or None
         self.async_write_ha_state()
