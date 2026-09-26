@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN
-from .info_map import info_part_uid_bare
+from .info_map import info_part_uid_bare, part_indices_from_unique_ids
 
 
 def registered_info_part_indices(
@@ -28,22 +28,13 @@ def registered_info_part_indices(
         domain: Limit to ``sensor`` / ``binary_sensor``, or both when omitted.
     """
     registry = er.async_get(hass)
-    bare = f"{entry.entry_id}_{info_part_uid_bare(skupina, caption_id)}"
-    prefix = f"{entry.entry_id}_g{skupina}_c{caption_id}_p"
     domains = {domain} if domain is not None else {"sensor", "binary_sensor"}
-    found: set[int] = set()
-    for ent in er.async_entries_for_config_entry(registry, entry.entry_id):
-        if ent.domain not in domains or ent.platform != DOMAIN:
-            continue
-        uid = ent.unique_id
-        if uid == bare:
-            found.add(0)
-            continue
-        if uid.startswith(prefix):
-            tail = uid[len(prefix) :]
-            if tail.isdigit():
-                found.add(int(tail))
-    return found
+    uids = (
+        ent.unique_id
+        for ent in er.async_entries_for_config_entry(registry, entry.entry_id)
+        if ent.domain in domains and ent.platform == DOMAIN
+    )
+    return part_indices_from_unique_ids(entry.entry_id, skupina, caption_id, uids)
 
 
 def remove_legacy_info_uid(

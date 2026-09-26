@@ -78,11 +78,17 @@ def test_paren_humidity_hint() -> None:
 
 def test_desired_part_slots_and_stub() -> None:
     """Remembered registry indices keep absent dual slots; stubs stay missing."""
-    from custom_components.atmos.info_map import desired_part_slots, stub_mapped_part
+    from custom_components.atmos.info_map import (
+        desired_part_slots,
+        info_part_uid_suffix,
+        part_indices_from_unique_ids,
+        stub_mapped_part,
+    )
 
     assert desired_part_slots(1, ()) == 1
     assert desired_part_slots(1, {0, 1}) == 2
     assert desired_part_slots(2, {0}) == 2
+    assert info_part_uid_suffix(12, 1284, 1) == "g12_c1284_p1"
     stub = stub_mapped_part(
         _row(value=f"15,0 {_CELSIUS}", caption="Średnia temp. zewnętrz.", caption_id=1284),
         1,
@@ -92,6 +98,22 @@ def test_desired_part_slots_and_stub() -> None:
     assert stub.part.kind is InfoValueKind.MISSING
     assert stub.part.name == "Średnia temp. zewnętrz. (2)"
     assert stub.unique_suffix == "g12_c1284_p1"
+    overflow = stub_mapped_part(_row(caption="Only", caption_id=1), 2, total_parts=1)
+    assert overflow.part.name == "Only (3)"
+    entry = "abc"
+    indices = part_indices_from_unique_ids(
+        entry,
+        12,
+        1284,
+        (
+            f"{entry}_g12_c1284",
+            f"{entry}_g12_c1284_p0",
+            f"{entry}_g12_c1284_p1",
+            f"{entry}_g12_c1284_pX",
+            f"{entry}_other",
+        ),
+    )
+    assert indices == {0, 1}
 
 
 def test_mode_row_device_and_tryb() -> None:

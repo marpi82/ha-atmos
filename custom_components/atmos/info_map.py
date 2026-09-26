@@ -38,6 +38,37 @@ def info_part_uid_bare(skupina: int, caption_id: int) -> str:
     return f"g{skupina}_c{caption_id}"
 
 
+def part_indices_from_unique_ids(
+    entry_id: str,
+    skupina: int,
+    caption_id: int,
+    unique_ids: Iterable[str],
+) -> set[int]:
+    """Parse Info part indices from entity unique_ids for one row.
+
+    Args:
+        entry_id: Config entry id prefix.
+        skupina: Info group id.
+        caption_id: Caption text id.
+        unique_ids: Candidate ``unique_id`` strings (any domain).
+
+    Returns:
+        Zero-based part indices found (legacy bare uid counts as ``0``).
+    """
+    bare = f"{entry_id}_{info_part_uid_bare(skupina, caption_id)}"
+    prefix = f"{entry_id}_g{skupina}_c{caption_id}_p"
+    found: set[int] = set()
+    for uid in unique_ids:
+        if uid == bare:
+            found.add(0)
+            continue
+        if uid.startswith(prefix):
+            tail = uid[len(prefix) :]
+            if tail.isdigit():
+                found.add(int(tail))
+    return found
+
+
 def desired_part_slots(live_count: int, registered_indices: Iterable[int]) -> int:
     """How many part slots to keep for a row (live dump plus registry memory).
 
@@ -132,5 +163,6 @@ __all__ = [
     "info_part_uid_suffix",
     "map_info_groups",
     "map_info_row",
+    "part_indices_from_unique_ids",
     "stub_mapped_part",
 ]
