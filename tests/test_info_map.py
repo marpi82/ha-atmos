@@ -48,6 +48,16 @@ def test_map_missing_temperature() -> None:
     assert parts[0].part.kind is InfoValueKind.MISSING
     assert parts[0].part.unit_token == _CELSIUS
     assert parts[0].multi is False
+    assert parts[0].unique_suffix == "g12_c1189"
+
+
+def test_map_info_groups_flattens_rows() -> None:
+    """map_info_groups concatenates parts from every row."""
+    from custom_components.atmos.info_map import map_info_groups
+
+    parts = map_info_groups([_row(), _row(value="ON", caption="Pump", caption_id=2)])
+    assert len(parts) >= 3
+    assert parts[-1].part.kind is InfoValueKind.BINARY
 
 
 def test_map_binary_and_valve() -> None:

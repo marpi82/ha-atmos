@@ -24,6 +24,8 @@ ignore:
   - "custom_components/atmos/wiring.py"
   - "custom_components/atmos/sensor.py"
   - "custom_components/atmos/binary_sensor.py"
+  - "custom_components/atmos/climate.py"
+  - "custom_components/atmos/number.py"
   - "custom_components/atmos/entity.py"
 
 comment:

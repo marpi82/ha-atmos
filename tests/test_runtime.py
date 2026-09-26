@@ -73,3 +73,42 @@ async def test_watch_notifies_once_when_the_window_expires() -> None:
     await watch
     assert watch.done()
     assert ActiveSource.WG1000 in seen
+
+
+async def test_circuit_snapshot_and_write_registers() -> None:
+    """Homepage circuits are stored and writes go through the bound client."""
+    from custom_components.atmos.circuit import CircuitState
+
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
+    state = CircuitState(
+        index=0,
+        name="Dom",
+        active=True,
+        humidity_supported=False,
+        temp_type=1,
+        preset="comfort",
+        current_c=21.0,
+        humidity=None,
+        comfort_c=21.0,
+        reduced_c=18.0,
+    )
+    runtime.note_circuits([state])
+    assert runtime.circuits == (state,)
+    assert runtime.circuit(0) is state
+    assert runtime.circuit(9) is None
+
+    written: list[tuple[int, int]] = []
+
+    async def _write(pairs: object) -> None:
+        written.extend(pairs)  # type: ignore[arg-type]
+
+    runtime.bind_write_registers(_write)
+    await runtime.write_registers([(1, 2)])
+    assert written == [(1, 2)]
+    runtime.bind_write_registers(None)
+    try:
+        await runtime.write_registers([(3, 4)])
+    except RuntimeError as exc:
+        assert "write path" in str(exc)
+    else:
+        raise AssertionError("expected RuntimeError")
