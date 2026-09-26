@@ -14,7 +14,7 @@ Home Assistant custom integration for ATMOS boilers. Today the live path is the 
 
 Serial is primary when both are configured, and only after `decode_frames` emits a register update inside `fallback_after` seconds (default 120). Raw bytes do not count. WG1000 is used when serial is not configured, or when it is configured but not fresh and the gateway session is up.
 
-`pull_register_ids()` returns the HOD16 wire ids from `registers.py` (temperatures, humidity, packed setpoints). Do not invent RS485 framing or WG1000 register ids in this repository — import them from `pyatmos_wg1000.protocol`.
+WG1000 sensors are discovered from the Info page (`skupina` groups via `InfoFeed`). Captions use `LanguageCatalog` / OwnText. Do not invent RS485 framing or WG1000 register ids here — import protocol helpers from `pyatmos_wg1000.protocol`.
 
 ## TODO(rs485)
 
@@ -34,10 +34,10 @@ uv run --group dev --group test poe validate
 
 CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `HACS Validation`, `build`.
 
-`source.py`, `runtime.py`, and `registers.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
+`source.py`, `runtime.py`, and `info.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
 
 Keep `manifest.json` library pins aligned with `pyproject.toml`, and `hacs.json` HA minimum aligned with docs (manifest has no HA version field).
 
 ## Conventions
 
-English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Value sensors use `{entry_id}_{translation_key}` from `registers.py`.
+English only. Ruff line length 130, Google docstrings. Entities use `should_poll = False` and `runtime.add_listener()`, except the byte counter. Diagnostic `unique_id` values are `{entry_id}_active_source`, `{entry_id}_serial_bytes`, and `{entry_id}_serial_link`. Info value sensors use `{entry_id}_g{skupina}_c{caption}`.

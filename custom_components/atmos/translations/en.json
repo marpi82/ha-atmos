@@ -22,7 +22,7 @@
       },
       "gateway": {
         "title": "WG1000",
-        "description": "Local gateway. Values are polled because the gateway does not push them. Outdoor, circuit, and DHW temperatures, humidity, and setpoints are read from the ACD register map.",
+        "description": "Local gateway. Values are polled from the Info page because the gateway does not push them. Groups and captions follow the live panel.",
         "data": {
           "wg1000_host": "Host",
           "wg1000_username": "Username",
@@ -34,25 +34,35 @@
           "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA."
         }
       },
+      "language": {
+        "title": "Language",
+        "description": "Choose the gateway language table used for Info group and sensor names. This does not change the language on the WG1000 panel.",
+        "data": {
+          "language": "Language"
+        }
+      },
       "reconfigure": {
         "title": "Reconfigure WG1000",
-        "description": "Update the gateway address or credentials. Leave the password blank to keep the current one.",
+        "description": "Update the gateway address, credentials, or Info language. Leave the password blank to keep the current one.",
         "data": {
           "wg1000_host": "Host",
           "wg1000_username": "Username",
           "wg1000_password": "Password",
-          "wg1000_verify_tls": "Verify the TLS certificate"
+          "wg1000_verify_tls": "Verify the TLS certificate",
+          "language": "Language"
         },
         "data_description": {
           "wg1000_host": "Gateway host name or IP address, without a scheme.",
           "wg1000_password": "Leave empty to keep the password already stored in this entry.",
-          "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA."
+          "wg1000_verify_tls": "The device certificate is signed by a private CA. Leave this off unless you have installed that CA.",
+          "language": "Gateway language table for Info captions. Does not write USER1_LANG on the panel."
         }
       }
     },
     "error": {
       "invalid_serial": "Enter a serial port and a positive baud rate.",
       "invalid_gateway": "Enter the gateway host, username, and password.",
+      "invalid_language": "Pick a language from the gateway table.",
       "invalid_fallback": "Enter a fallback window between 1 and 3600 seconds.",
       "cannot_connect": "Could not open a WebSocket to the gateway. Check the host, that Home Assistant can reach it on the LAN, and that TLS verify matches the device certificate.",
       "invalid_auth": "The gateway rejected the username or password.",
@@ -92,75 +102,6 @@
       },
       "serial_bytes": {
         "name": "RS485 bytes seen"
-      },
-      "outdoor_temperature": {
-        "name": "Outdoor temperature"
-      },
-      "outdoor_temperature_min": {
-        "name": "Outdoor temperature (min)"
-      },
-      "outdoor_temperature_max": {
-        "name": "Outdoor temperature (max)"
-      },
-      "circuit_1_temperature": {
-        "name": "Circuit 1 temperature"
-      },
-      "circuit_2_temperature": {
-        "name": "Circuit 2 temperature"
-      },
-      "circuit_3_temperature": {
-        "name": "Circuit 3 temperature"
-      },
-      "circuit_4_temperature": {
-        "name": "Circuit 4 temperature"
-      },
-      "dhw_temperature": {
-        "name": "DHW temperature"
-      },
-      "circuit_1_humidity": {
-        "name": "Circuit 1 humidity"
-      },
-      "circuit_2_humidity": {
-        "name": "Circuit 2 humidity"
-      },
-      "circuit_3_humidity": {
-        "name": "Circuit 3 humidity"
-      },
-      "circuit_4_humidity": {
-        "name": "Circuit 4 humidity"
-      },
-      "dhw_humidity": {
-        "name": "DHW humidity"
-      },
-      "circuit_1_comfort_setpoint": {
-        "name": "Circuit 1 comfort setpoint"
-      },
-      "circuit_1_reduced_setpoint": {
-        "name": "Circuit 1 reduced setpoint"
-      },
-      "circuit_2_comfort_setpoint": {
-        "name": "Circuit 2 comfort setpoint"
-      },
-      "circuit_2_reduced_setpoint": {
-        "name": "Circuit 2 reduced setpoint"
-      },
-      "circuit_3_comfort_setpoint": {
-        "name": "Circuit 3 comfort setpoint"
-      },
-      "circuit_3_reduced_setpoint": {
-        "name": "Circuit 3 reduced setpoint"
-      },
-      "circuit_4_comfort_setpoint": {
-        "name": "Circuit 4 comfort setpoint"
-      },
-      "circuit_4_reduced_setpoint": {
-        "name": "Circuit 4 reduced setpoint"
-      },
-      "dhw_comfort_setpoint": {
-        "name": "DHW comfort setpoint"
-      },
-      "dhw_reduced_setpoint": {
-        "name": "DHW reduced setpoint"
       }
     },
     "binary_sensor": {

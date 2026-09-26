@@ -1,4 +1,4 @@
-"""Config flow for the WG1000 poll path.
+"""Config flow for the WG1000 Info poll path.
 
 TODO(rs485): re-offer ``serial_only`` / ``both`` in the user menu when the
 serial codec is ready. The serial form steps below stay for that path.
@@ -6,16 +6,18 @@ serial codec is ready. The serial form steps below stay for that path.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import HomeAssistant
-from pyatmos_wg1000 import AtmosClient
+from homeassistant.helpers.selector import SelectOptionDict, SelectSelector, SelectSelectorConfig, SelectSelectorMode
+from pyatmos_wg1000 import AtmosClient, LanguageCatalog
 
 from .const import (
     CONF_FALLBACK_AFTER,
+    CONF_LANGUAGE,
     CONF_SERIAL_BAUDRATE,
     CONF_SERIAL_PORT,
     CONF_WG1000_HOST,
@@ -25,6 +27,7 @@ from .const import (
     DEFAULT_FALLBACK_AFTER,
     DOMAIN,
 )
+from .info import gateway_language_for_hass
 
 _SERIAL_SCHEMA = vol.Schema(
     {
@@ -44,10 +47,12 @@ class _Draft:
     username: str | None = None
     password: str | None = None
     verify_tls: bool = False
+    language: str | None = None
+    languages: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
 
 class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Set up and reconfigure the local WG1000 poll path.
+    """Set up and reconfigure the local WG1000 Info poll path.
 
     Serial listen remains in the codebase for a later release; the user menu
     does not offer it yet.
@@ -71,7 +76,7 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_gateway()
 
     async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Change WG1000 host, credentials, or TLS verification.
+        """Change WG1000 host, credentials, TLS, or language.
 
         Args:
             user_input: Submitted gateway fields, when the form was posted.
@@ -83,6 +88,7 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
             username = _text(user_input.get(CONF_WG1000_USERNAME))
             password = user_input.get(CONF_WG1000_PASSWORD)
             verify = user_input.get(CONF_WG1000_VERIFY_TLS, False)
+            language = _text(user_input.get(CONF_LANGUAGE))
             if not isinstance(password, str):
                 password = ""
             if password == "":
@@ -91,15 +97,19 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
             if host is None or username is None or password == "" or not isinstance(verify, bool):
                 errors["base"] = "invalid_gateway"
             else:
-                auth_error = await _probe_gateway(self.hass, host, username, password, verify)
-                if auth_error is not None:
-                    errors["base"] = auth_error
+                probe = await _probe_gateway(self.hass, host, username, password, verify)
+                if probe.error is not None:
+                    errors["base"] = probe.error
                 else:
                     data = dict(entry.data)
                     data[CONF_WG1000_HOST] = host
                     data[CONF_WG1000_USERNAME] = username
                     data[CONF_WG1000_PASSWORD] = password
                     data[CONF_WG1000_VERIFY_TLS] = verify
+                    if language and language in {code for code, _name in probe.languages}:
+                        data[CONF_LANGUAGE] = language
+                    elif CONF_LANGUAGE not in data:
+                        data[CONF_LANGUAGE] = probe.default_language
                     await self.async_set_unique_id(_unique_id(data))
                     self._abort_if_unique_id_mismatch(reason="already_configured")
                     return self.async_update_reload_and_abort(
@@ -107,9 +117,10 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
                         data=data,
                         title=_title_from_data(data),
                     )
+        languages = await _languages_for_entry(self.hass, entry)
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_gateway_schema(entry.data, password_optional=True),
+            data_schema=_gateway_schema(entry.data, password_optional=True, languages=languages),
             errors=errors,
         )
 
@@ -191,16 +202,42 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
             ):
                 errors["base"] = "invalid_gateway"
             else:
-                auth_error = await _probe_gateway(self.hass, host, username, password, verify)
-                if auth_error is not None:
-                    errors["base"] = auth_error
+                probe = await _probe_gateway(self.hass, host, username, password, verify)
+                if probe.error is not None:
+                    errors["base"] = probe.error
                 else:
                     self._draft.host = host
                     self._draft.username = username
                     self._draft.password = password
                     self._draft.verify_tls = verify
-                    return await self._create()
+                    self._draft.languages = probe.languages
+                    self._draft.language = probe.default_language
+                    return await self.async_step_language()
         return self.async_show_form(step_id="gateway", data_schema=_gateway_schema(), errors=errors)
+
+    async def async_step_language(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Pick the gateway language table used for Info captions.
+
+        Args:
+            user_input: Submitted language code, when the form was posted.
+        """
+        errors: dict[str, str] = {}
+        codes = {code for code, _name in self._draft.languages}
+        if user_input is not None:
+            language = _text(user_input.get(CONF_LANGUAGE))
+            if language is None or language not in codes:
+                errors["base"] = "invalid_language"
+            else:
+                self._draft.language = language
+                return await self._create()
+        default = self._draft.language or "ENG"
+        if default not in codes and self._draft.languages:
+            default = self._draft.languages[0][0]
+        return self.async_show_form(
+            step_id="language",
+            data_schema=_language_schema(self._draft.languages, default),
+            errors=errors,
+        )
 
     async def _create(self) -> ConfigFlowResult:
         data = _entry_data(self._draft)
@@ -243,49 +280,89 @@ class AtmosOptionsFlow(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=_fallback_schema(entry))
 
 
+@dataclass(frozen=True)
+class _GatewayProbe:
+    error: str | None = None
+    languages: tuple[tuple[str, str], ...] = ()
+    default_language: str = "ENG"
+
+
 async def _probe_gateway(
     hass: HomeAssistant,
     host: str,
     username: str,
     password: str,
     verify_tls: bool,
-) -> str | None:
-    """Return a config-flow error key, or ``None`` when login succeeds."""
-    del hass  # reserved for future executor helpers
+) -> _GatewayProbe:
+    """Probe login and load gateway language columns."""
     client = AtmosClient(host, verify_tls=verify_tls)
     try:
         await client.connect()
         await client.hello()
         result = await client.login(username, password)
+        if not result.logged_in:
+            await client.aclose()
+            if result.blocked:
+                return _GatewayProbe(error="login_blocked")
+            return _GatewayProbe(error="invalid_auth")
+        catalog = await LanguageCatalog.fetch(client)
     except Exception:
         await client.aclose()
-        return "cannot_connect"
+        return _GatewayProbe(error="cannot_connect")
     await client.aclose()
-    if result.logged_in:
-        return None
-    if result.blocked:
-        return "login_blocked"
-    return "invalid_auth"
+    languages = tuple((lang.code, lang.name) for lang in catalog.languages())
+    codes = tuple(code for code, _name in languages)
+    mapped = gateway_language_for_hass(hass.config.language, codes)
+    default = mapped or catalog.language.code
+    if default not in codes and codes:
+        default = codes[0]
+    return _GatewayProbe(languages=languages, default_language=default)
+
+
+async def _languages_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> tuple[tuple[str, str], ...]:
+    host = entry.data.get(CONF_WG1000_HOST)
+    username = entry.data.get(CONF_WG1000_USERNAME)
+    password = entry.data.get(CONF_WG1000_PASSWORD)
+    verify = entry.data.get(CONF_WG1000_VERIFY_TLS, False)
+    if not isinstance(host, str) or not isinstance(username, str) or not isinstance(password, str):
+        return ()
+    if not isinstance(verify, bool):
+        return ()
+    probe = await _probe_gateway(hass, host, username, password, verify)
+    return probe.languages
 
 
 def _gateway_schema(
     defaults: dict[str, Any] | None = None,
     *,
     password_optional: bool = False,
+    languages: tuple[tuple[str, str], ...] = (),
 ) -> vol.Schema:
     data = defaults or {}
     host = data.get(CONF_WG1000_HOST, "")
     username = data.get(CONF_WG1000_USERNAME, "")
     verify = data.get(CONF_WG1000_VERIFY_TLS, False)
     password_key = vol.Optional(CONF_WG1000_PASSWORD, default="") if password_optional else vol.Required(CONF_WG1000_PASSWORD)
-    return vol.Schema(
-        {
-            vol.Required(CONF_WG1000_HOST, default=host if isinstance(host, str) else ""): str,
-            vol.Required(CONF_WG1000_USERNAME, default=username if isinstance(username, str) else ""): str,
-            password_key: str,
-            vol.Required(CONF_WG1000_VERIFY_TLS, default=bool(verify)): bool,
-        }
-    )
+    schema: dict[Any, Any] = {
+        vol.Required(CONF_WG1000_HOST, default=host if isinstance(host, str) else ""): str,
+        vol.Required(CONF_WG1000_USERNAME, default=username if isinstance(username, str) else ""): str,
+        password_key: str,
+        vol.Required(CONF_WG1000_VERIFY_TLS, default=bool(verify)): bool,
+    }
+    if languages:
+        current = data.get(CONF_LANGUAGE, languages[0][0])
+        default = current if isinstance(current, str) else languages[0][0]
+        schema[vol.Required(CONF_LANGUAGE, default=default)] = _language_selector(languages)
+    return vol.Schema(schema)
+
+
+def _language_schema(languages: tuple[tuple[str, str], ...], default: str) -> vol.Schema:
+    return vol.Schema({vol.Required(CONF_LANGUAGE, default=default): _language_selector(languages)})
+
+
+def _language_selector(languages: tuple[tuple[str, str], ...]) -> SelectSelector:
+    options = [SelectOptionDict(value=code, label=f"{name} ({code})") for code, name in languages]
+    return SelectSelector(SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN))
 
 
 def _fallback_schema(entry: ConfigEntry) -> vol.Schema:
@@ -308,6 +385,8 @@ def _entry_data(draft: _Draft) -> dict[str, object]:
         data[CONF_WG1000_USERNAME] = draft.username
         data[CONF_WG1000_PASSWORD] = draft.password
         data[CONF_WG1000_VERIFY_TLS] = draft.verify_tls
+        if draft.language:
+            data[CONF_LANGUAGE] = draft.language
     return data
 
 

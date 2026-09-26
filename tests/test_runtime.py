@@ -1,10 +1,11 @@
-"""Runtime keeps the two value maps apart and flips when serial goes stale."""
+"""Runtime keeps Info groups and flips when serial goes stale."""
 
 from __future__ import annotations
 
 import asyncio
 import sys
 
+from custom_components.atmos.info import InfoGroup, InfoRow
 from custom_components.atmos.runtime import AtmosRuntime
 from custom_components.atmos.source import ActiveSource, SourceConfig
 
@@ -15,28 +16,35 @@ def test_import_does_not_load_home_assistant() -> None:
     assert "custom_components.atmos.wiring" not in sys.modules
 
 
-def test_values_follow_the_active_map() -> None:
-    """A fresh serial word wins, then the polled word wins after the window."""
-    runtime = AtmosRuntime(SourceConfig(serial=True, wg1000=True, fallback_after=10))
-    runtime.set_serial_open(True)
+def test_info_rows_are_indexed_by_group_and_caption() -> None:
+    """WG1000 Info sensors look up the last dump by stable ids."""
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
     runtime.set_gateway_open(True)
-    runtime.note_serial_bytes(40)
-    runtime.note_gateway_update(1, 5)
-    runtime.note_serial_update(1, 9, now=100.0)
+    row = InfoRow(
+        skupina=1,
+        caption_id=1014,
+        text_a_id=1575,
+        text_b_id=1614,
+        typ=2,
+        caption="AF",
+        text_a="AF",
+        text_b="",
+        value="25,9 °C",
+        is_alarm=False,
+    )
+    runtime.note_info_groups([InfoGroup(skupina=1, title="Temperatury", rows=(row,))])
+    assert runtime.group_title(1) == "Temperatury"
+    assert runtime.info_row(1, 1014) == row
+    assert runtime.active_source() is ActiveSource.WG1000
 
-    assert runtime.serial_bytes_seen == 40
-    assert runtime.value(1, now=100.0) == 9
-    assert runtime.active_source(now=109.9) is ActiveSource.SERIAL
-    assert runtime.value(1, now=110.0) == 5
 
-
-def test_serial_only_never_reads_the_gateway_map() -> None:
-    """Gateway samples are stored only as a fallback the user asked for."""
+def test_serial_only_never_reads_info_as_active_when_closed() -> None:
+    """A serial-only entry stays unavailable until the port opens."""
     runtime = AtmosRuntime(SourceConfig(serial=True, wg1000=False, fallback_after=10))
+    assert runtime.active_source() is ActiveSource.NONE
     runtime.set_serial_open(True)
-    runtime.note_gateway_update(1, 5)
     runtime.note_serial_update(1, 9, now=100.0)
-    assert runtime.value(1, now=1000.0) == 9
+    assert runtime.value(1, now=100.0) == 9
 
 
 def test_unsubscribe_stops_callbacks() -> None:
