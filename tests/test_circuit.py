@@ -96,9 +96,8 @@ def test_records_by_id_skips_missing_values() -> None:
 
 def test_circuits_from_records_holiday_and_summer_presets() -> None:
     """Timed and summer regime indices map to preset names."""
-    holiday = 0x01
     records = [
-        ParamRecord(register_id=hod16_id(Hod16.O1_OBECNE), kind=ParamType.READ_ONLY, value=holiday),
+        ParamRecord(register_id=hod16_id(Hod16.O1_OBECNE), kind=ParamType.READ_ONLY, value=0x01),
         ParamRecord(
             register_id=hod16_id(Hod16.O1_REZIM),
             kind=ParamType.READ_ONLY,
