@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Dovolená",
+              "absence": "Nepřítomnost",
+              "visit": "Návštěva",
+              "auto": "Auto",
+              "summer": "Léto",
+              "comfort": "Komfort",
+              "reduced": "Útlum",
+              "standby": "Pohotovost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Teplota komfort"
+      },
+      "setpoint_reduced": {
+        "name": "Teplota útlum"
+      }
+    }
+  }
+}

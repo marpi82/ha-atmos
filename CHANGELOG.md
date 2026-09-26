@@ -7,7 +7,13 @@
 - Require Home Assistant `>=2026.8.0` (`via_device_id` only; no `via_device` fallback).
 - Split Info display strings into typed sensors / binary sensors / valve enums; `---` → unknown.
 - Add homepage circuit `climate` + comfort/reduced `number` entities (PARAM HOD16 read/write).
-- Require `py-atmos-wg1000==2026.9.0b4`.
+- Expose all eight `Regime_menu` climate presets (holiday…standby) with gateway-language translations.
+- Require `py-atmos-wg1000==2026.9.0b5`.
+
+### Fixed
+
+- Info dual-row names: abbreviated caption halves and valve `A / B - role / role` captions.
+- Empty OwnText group titles (e.g. CWU) fall back to `TUV` / `Circuit N` instead of `Group N`.
 
 ## [2026.9.0a3] - 2026-09-25
 

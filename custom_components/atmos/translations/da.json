@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Ferie",
+              "absence": "Fravær",
+              "visit": "Besøg",
+              "auto": "Auto",
+              "summer": "Sommer",
+              "comfort": "Komfort",
+              "reduced": "Sænket",
+              "standby": "Standby"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Komfort-setpunkt"
+      },
+      "setpoint_reduced": {
+        "name": "Sænket setpunkt"
+      }
+    }
+  }
+}

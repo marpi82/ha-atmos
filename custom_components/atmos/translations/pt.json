@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termóstato",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Férias",
+              "absence": "Ausência",
+              "visit": "Visita",
+              "auto": "Auto",
+              "summer": "Verão",
+              "comfort": "Conforto",
+              "reduced": "Reduzido",
+              "standby": "Espera"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Setpoint conforto"
+      },
+      "setpoint_reduced": {
+        "name": "Setpoint reduzido"
+      }
+    }
+  }
+}

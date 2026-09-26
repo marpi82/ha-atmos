@@ -48,3 +48,33 @@ def test_resolve_info_dump_builds_groups() -> None:
     assert groups[0].rows[0].value == "25,9 °C"
     assert groups[1].title == "Dom"
     assert groups[1].rows == ()
+
+
+def test_resolve_info_dump_empty_own_text_tuv_title() -> None:
+    """Empty OwnText[4] becomes TUV instead of Group 11."""
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=11, text_a=0x8004, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    groups = resolve_info_dump(dump, _Catalog(), ("Dom", "Poddasze"))
+    assert groups[0].title == "TUV"
+
+
+def test_resolve_info_dump_empty_own_text_circuit_title() -> None:
+    """Empty OwnText slots other than TUV fall back to Circuit N."""
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=14, text_a=0x8002, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    groups = resolve_info_dump(dump, _Catalog(), ("Dom", "Poddasze"))
+    assert groups[0].title == "Circuit 3"
+
+
+def test_resolve_info_dump_unknown_title_falls_back_to_group() -> None:
+    """Non-OwnText empty titles keep the Group N fallback."""
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=99, text_a=1614, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    groups = resolve_info_dump(dump, _Catalog(), ())
+    assert groups[0].title == "Group 99"

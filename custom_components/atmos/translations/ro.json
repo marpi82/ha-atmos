@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Vacanță",
+              "absence": "Absență",
+              "visit": "Vizită",
+              "auto": "Auto",
+              "summer": "Vară",
+              "comfort": "Confort",
+              "reduced": "Redus",
+              "standby": "Așteptare"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Setpoint confort"
+      },
+      "setpoint_reduced": {
+        "name": "Setpoint redus"
+      }
+    }
+  }
+}

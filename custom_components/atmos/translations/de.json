@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Thermostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Urlaub",
+              "absence": "Abwesenheit",
+              "visit": "Besuch",
+              "auto": "Auto",
+              "summer": "Sommer",
+              "comfort": "Komfort",
+              "reduced": "Absenkung",
+              "standby": "Bereitschaft"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Komfort-Sollwert"
+      },
+      "setpoint_reduced": {
+        "name": "Absenk-Sollwert"
+      }
+    }
+  }
+}

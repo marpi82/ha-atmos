@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostato",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Vacaciones",
+              "absence": "Ausencia",
+              "visit": "Visita",
+              "auto": "Auto",
+              "summer": "Verano",
+              "comfort": "Confort",
+              "reduced": "Reducido",
+              "standby": "Espera"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Consigna confort"
+      },
+      "setpoint_reduced": {
+        "name": "Consigna reducido"
+      }
+    }
+  }
+}

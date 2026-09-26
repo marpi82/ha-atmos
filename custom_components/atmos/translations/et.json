@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostaat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Puhkus",
+              "absence": "Eemalolek",
+              "visit": "Külastus",
+              "auto": "Auto",
+              "summer": "Suvi",
+              "comfort": "Mugavus",
+              "reduced": "Alam",
+              "standby": "Ooterežiim"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Mugavustemperatuur"
+      },
+      "setpoint_reduced": {
+        "name": "Alamtemperatuur"
+      }
+    }
+  }
+}

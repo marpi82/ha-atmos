@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Термостат",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Отпуск",
+              "absence": "Отсутствие",
+              "visit": "Визит",
+              "auto": "Авто",
+              "summer": "Лето",
+              "comfort": "Комфорт",
+              "reduced": "Эконом",
+              "standby": "Ожидание"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Уставка комфорт"
+      },
+      "setpoint_reduced": {
+        "name": "Уставка эконом"
+      }
+    }
+  }
+}

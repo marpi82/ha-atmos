@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "climate": {
+      "circuit": {
+        "name": "Termostat",
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "holiday": "Počitnice",
+              "absence": "Odsotnost",
+              "visit": "Obisk",
+              "auto": "Avto",
+              "summer": "Poletje",
+              "comfort": "Udobje",
+              "reduced": "Znižano",
+              "standby": "Pripravljenost"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "setpoint_comfort": {
+        "name": "Nastavitev udobje"
+      },
+      "setpoint_reduced": {
+        "name": "Nastavitev znižano"
+      }
+    }
+  }
+}

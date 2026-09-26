@@ -25,7 +25,7 @@ keywords = [
 ]
 dependencies = [
   "py-atmos-serial==2026.9.0a1",
-  "py-atmos-wg1000==2026.9.0b4",
+  "py-atmos-wg1000==2026.9.0b5",
 ]
 classifiers = [
   "Development Status :: 1 - Planning",
