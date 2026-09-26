@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [2026.9.0a5] - 2026-09-26
+
 ### Changed
 
 - Require Home Assistant `>=2026.8.0` (`via_device_id` only; no `via_device` fallback).
