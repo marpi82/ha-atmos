@@ -12,10 +12,11 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from pyatmos_wg1000 import AtmosClient
+from pyatmos_wg1000 import AtmosClient, InfoFeed, LanguageCatalog
 
 from .const import (
     CONF_FALLBACK_AFTER,
+    CONF_LANGUAGE,
     CONF_SERIAL_BAUDRATE,
     CONF_SERIAL_PORT,
     CONF_WG1000_HOST,
@@ -28,8 +29,8 @@ from .const import (
     DEFAULT_WG1000_PORT,
     DOMAIN,
     PLATFORMS,
-    pull_register_ids,
 )
+from .info import gateway_language_for_hass, resolve_info_dump
 from .runtime import AtmosRuntime
 from .source import SourceConfig
 
@@ -87,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     runtime = AtmosRuntime(config_from_entry(entry))
     serial_open = await _start_serial(hass, entry, runtime)
-    gateway_open = await _start_gateway(entry, runtime)
+    gateway_open = await _start_gateway(hass, entry, runtime)
     if not serial_open and not gateway_open:
         await runtime.aclose()
         raise ConfigEntryNotReady("Neither RS485 nor WG1000 is reachable")
@@ -196,7 +197,7 @@ async def _bridge_serial(feed: AtmosSerialFeed, runtime: AtmosRuntime) -> None:
         runtime.note_serial_update(update.register_id, update.value, now=time.monotonic())
 
 
-async def _start_gateway(entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
+async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
     if not runtime.config.wg1000:
         return False
     host = entry.data.get(CONF_WG1000_HOST)
@@ -229,11 +230,31 @@ async def _start_gateway(entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
         await client.aclose()
         return False
 
-    stop = asyncio.Event()
-    pull = asyncio.create_task(_pull_gateway(client, runtime, stop), name="atmos-wg1000")
+    language = _entry_language(entry)
+    try:
+        catalog = await LanguageCatalog.fetch(client, language=language)
+        if language is None:
+            codes = tuple(lang.code for lang in catalog.languages())
+            mapped = gateway_language_for_hass(hass.config.language, codes)
+            catalog.select(mapped or catalog.language.code)
+        own_text = await client.fetch_own_text()
+        dump = await client.fetch_info()
+    except Exception:
+        LOGGER.exception("WG1000 Info bootstrap failed")
+        with suppress(Exception):
+            await client.logout()
+        await client.aclose()
+        return False
+
+    runtime.language = catalog.language.code
+    runtime.note_info_groups(resolve_info_dump(dump, catalog, own_text))
+
+    pull = asyncio.create_task(
+        _pull_info(client, runtime, catalog, own_text),
+        name="atmos-wg1000-info",
+    )
 
     async def _close_gateway() -> None:
-        stop.set()
         pull.cancel()
         with suppress(asyncio.CancelledError):
             await pull
@@ -246,24 +267,22 @@ async def _start_gateway(entry: ConfigEntry, runtime: AtmosRuntime) -> bool:
     return True
 
 
-async def _pull_gateway(client: AtmosClient, runtime: AtmosRuntime, stop: asyncio.Event) -> None:
-    """Poll the configured WG1000 register map and bridge updates into the runtime."""
+async def _pull_info(
+    client: AtmosClient,
+    runtime: AtmosRuntime,
+    catalog: LanguageCatalog,
+    own_text: tuple[str, ...],
+) -> None:
+    """Poll Info dumps and bridge resolved groups into the runtime."""
     try:
-        register_ids = pull_register_ids()
-        if not register_ids:
-            LOGGER.info("WG1000 pull is idle because the register map is empty")
-            await stop.wait()
-            return
-        from pyatmos_wg1000 import AtmosFeed
-
-        feed = AtmosFeed(client, register_ids, interval=DEFAULT_POLL_INTERVAL)
-        LOGGER.info("WG1000 pull started for %s registers", len(register_ids))
+        feed = InfoFeed(client, interval=DEFAULT_POLL_INTERVAL)
 
         async def _bridge() -> None:
             async for update in feed.bus.subscribe():
-                runtime.note_gateway_update(update.register_id, update.value)
+                runtime.note_info_groups(resolve_info_dump(update.dump, catalog, own_text))
 
-        bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-bridge")
+        bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-info-bridge")
+        LOGGER.info("WG1000 Info poll started (language=%s)", catalog.language.code)
         try:
             await feed.run()
         finally:
@@ -273,6 +292,11 @@ async def _pull_gateway(client: AtmosClient, runtime: AtmosRuntime, stop: asynci
     except asyncio.CancelledError:
         raise
     except Exception:
-        LOGGER.exception("WG1000 pull stopped")
+        LOGGER.exception("WG1000 Info poll stopped")
         runtime.set_gateway_open(False)
         raise
+
+
+def _entry_language(entry: ConfigEntry) -> str | None:
+    raw = entry.data.get(CONF_LANGUAGE)
+    return raw if isinstance(raw, str) and raw else None

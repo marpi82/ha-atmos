@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Rebuild WG1000 entities from the Info page dump (groups, OwnText names, gateway language).
+- Require `py-atmos-wg1000==2026.9.0b3`.
+
 ## [2026.9.0a3] - 2026-09-25
 
 ### Added
@@ -28,7 +35,7 @@
 - Dual-source runtime kept for a future RS485 path; serial / both are hidden in the config flow for now.
 - HACS packaging (`ha-atmos-hacs.zip`) via GitHub Releases.
 
-## Unreleased
+## Unreleased (historical notes)
 
 ### Added
 
@@ -42,4 +49,3 @@
 
 - Config flow offers WG1000 only for now; serial / both steps remain for a later release.
 - `wiring.py` lazy-imports `pyatmos_serial` so WG1000-only setups do not need it at import time.
-

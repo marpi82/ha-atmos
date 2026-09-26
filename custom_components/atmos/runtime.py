@@ -1,19 +1,20 @@
-"""In-memory arbitration between the RS485 listen and the WG1000 poll."""
+"""In-memory arbitration between the RS485 listen and the WG1000 Info poll."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 
+from .info import InfoGroup, InfoRow
 from .source import ActiveSource, SourceConfig, choose_source
 
 logger = logging.getLogger(__name__)
 
 
 class AtmosRuntime:
-    """Holds both value maps and tells entities which one is active.
+    """Holds Info groups and serial samples; tells entities which source is active.
 
     Listeners run on the event loop. They must not block.
     """
@@ -22,11 +23,13 @@ class AtmosRuntime:
         """Start with both transports closed and no samples."""
         self.config = config
         self.serial_bytes_seen = 0
+        self.language: str | None = None
         self._serial_open = False
         self._gateway_open = False
         self._last_serial: float | None = None
         self._serial_values: dict[int, int] = {}
-        self._gateway_values: dict[int, int] = {}
+        self._info_groups: tuple[InfoGroup, ...] = ()
+        self._info_rows: dict[tuple[int, int], InfoRow] = {}
         self._listeners: list[Callable[[], None]] = []
         self._closers: list[Callable[[], Awaitable[None]]] = []
         self._stale_emitted = False
@@ -40,6 +43,11 @@ class AtmosRuntime:
     def gateway_open(self) -> bool:
         """Return whether the WG1000 session is logged in."""
         return self._gateway_open
+
+    @property
+    def info_groups(self) -> tuple[InfoGroup, ...]:
+        """Return the last resolved Info groups (empty until the first dump)."""
+        return self._info_groups
 
     def add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
         """Register ``listener`` and return an unsubscribe callable.
@@ -103,15 +111,42 @@ class AtmosRuntime:
         self._stale_emitted = False
         self._emit()
 
-    def note_gateway_update(self, register_id: int, value: int) -> None:
-        """Store one polled WG1000 sample.
+    def note_info_groups(self, groups: Sequence[InfoGroup]) -> None:
+        """Replace the WG1000 Info snapshot and notify listeners.
 
         Args:
-            register_id: Wire register id.
-            value: Raw word.
+            groups: Resolved Info groups from the latest dump.
         """
-        self._gateway_values[register_id] = value
+        snapshot = tuple(groups)
+        rows: dict[tuple[int, int], InfoRow] = {}
+        for group in snapshot:
+            for row in group.rows:
+                if row.is_alarm or row.typ not in (1, 2):
+                    continue
+                rows[(row.skupina, row.caption_id)] = row
+        self._info_groups = snapshot
+        self._info_rows = rows
         self._emit()
+
+    def info_row(self, skupina: int, caption_id: int) -> InfoRow | None:
+        """Return one Info value row, or ``None`` when missing.
+
+        Args:
+            skupina: Info group id.
+            caption_id: Caption text id used in ``unique_id``.
+        """
+        return self._info_rows.get((skupina, caption_id))
+
+    def group_title(self, skupina: int) -> str | None:
+        """Return the display title for an Info group.
+
+        Args:
+            skupina: Info group id.
+        """
+        for group in self._info_groups:
+            if group.skupina == skupina:
+                return group.title
+        return None
 
     def active_source(self, *, now: float | None = None) -> ActiveSource:
         """Return the transport that owns state at ``now``.
@@ -129,7 +164,10 @@ class AtmosRuntime:
         )
 
     def value(self, register_id: int, *, now: float | None = None) -> int | None:
-        """Return the raw word from the active transport.
+        """Return a raw serial register word when serial is active.
+
+        Info values are strings on :meth:`info_row`; this remains for the
+        parked RS485 path.
 
         Args:
             register_id: Wire register id.
@@ -138,8 +176,6 @@ class AtmosRuntime:
         source = self.active_source(now=now)
         if source is ActiveSource.SERIAL:
             return self._serial_values.get(register_id)
-        if source is ActiveSource.WG1000:
-            return self._gateway_values.get(register_id)
         return None
 
     async def watch_fallback(self, stop: asyncio.Event) -> None:
