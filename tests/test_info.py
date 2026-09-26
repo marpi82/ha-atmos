@@ -87,6 +87,16 @@ def test_resolve_info_dump_own_text_overrides_catalog_tuv() -> None:
     assert groups[0].title == "Bojler"
 
 
+def test_resolve_info_dump_single_side_title() -> None:
+    """Title with only TextA keeps that string."""
+    dump = InfoDump(
+        ac16=0,
+        items=(InfoItem(typ=0, vzhled=0, skupina=1, text_a=1011, text_b=1614, caption=1614, value=b"\x00"),),
+    )
+    groups = resolve_info_dump(dump, _Catalog(), ())
+    assert groups[0].title == "Temperatury"
+
+
 def test_resolve_info_dump_empty_own_text_circuit_title() -> None:
     """Empty OwnText slots other than TUV fall back to Circuit N."""
     dump = InfoDump(

@@ -26,11 +26,31 @@ def test_resolve_circuit_name_own_text_and_tuv() -> None:
         def text(self, key: str) -> str | None:
             return {"T16_94": "CWU"}.get(key)
 
+    class EmptyCatalog:
+        def text(self, key: str) -> str | None:
+            return None
+
     assert resolve_circuit_name(0, ("Dom", "Poddasze")) == "Dom"
     assert resolve_circuit_name(4, ("Dom",), Catalog()) == "CWU"
     assert resolve_circuit_name(4, ("Dom", "Poddasze", "", "", "Bojler"), Catalog()) == "Bojler"
+    assert resolve_circuit_name(4, (), EmptyCatalog()) == "TUV"
     assert resolve_circuit_name(4, ("Dom",)) == "TUV"
     assert resolve_circuit_name(2, ()) == "Circuit 3"
+
+
+def test_circuits_from_records_tuv_uses_catalog() -> None:
+    """Active TUV circuit picks CWU from the language catalog."""
+
+    class Catalog:
+        def text(self, key: str) -> str | None:
+            return {"T16_94": "CWU"}.get(key)
+
+    records = [
+        ParamRecord(register_id=hod16_id(Hod16.TUV_OBECNE), kind=ParamType.READ_ONLY, value=0x01),
+    ]
+    circ = circuits_from_records(records, catalog=Catalog())[0]
+    assert circ.index == 4
+    assert circ.name == "CWU"
 
 
 def test_circuits_from_records_active_comfort() -> None:
