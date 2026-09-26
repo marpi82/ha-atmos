@@ -98,7 +98,8 @@ def _info_sensors(
             if row.typ not in _VALUE_TYPES:
                 continue
             mapped = map_info_row(row)
-            if len(mapped) > 1:
+            # Drop the pre-split string sensor when the row became multi-part or moved to binary_sensor.
+            if len(mapped) > 1 or any(part.part.kind is InfoValueKind.BINARY for part in mapped):
                 old_uid = f"{entry.entry_id}_g{row.skupina}_c{row.caption_id}"
                 if (entity_id := registry.async_get_entity_id("sensor", "atmos", old_uid)) is not None:
                     registry.async_remove(entity_id)
