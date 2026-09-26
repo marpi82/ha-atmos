@@ -106,21 +106,32 @@ class AtmosConfigFlow(ConfigFlow, domain=DOMAIN):
                     data[CONF_WG1000_USERNAME] = username
                     data[CONF_WG1000_PASSWORD] = password
                     data[CONF_WG1000_VERIFY_TLS] = verify
-                    if language and language in {code for code, _name in probe.languages}:
-                        data[CONF_LANGUAGE] = language
-                    elif CONF_LANGUAGE not in data:
-                        data[CONF_LANGUAGE] = probe.default_language
-                    await self.async_set_unique_id(_unique_id(data))
-                    self._abort_if_unique_id_mismatch(reason="already_configured")
-                    return self.async_update_reload_and_abort(
-                        entry,
-                        data=data,
-                        title=_title_from_data(data),
-                    )
-        languages = await _languages_for_entry(self.hass, entry)
+                    codes = {code for code, _name in probe.languages}
+                    if language is not None and language not in codes:
+                        errors["base"] = "invalid_language"
+                    else:
+                        if language in codes:
+                            data[CONF_LANGUAGE] = language
+                        else:
+                            stored = data.get(CONF_LANGUAGE)
+                            if not isinstance(stored, str) or stored not in codes:
+                                data[CONF_LANGUAGE] = probe.default_language
+                        await self.async_set_unique_id(_unique_id(data))
+                        self._abort_if_unique_id_mismatch(reason="already_configured")
+                        return self.async_update_reload_and_abort(
+                            entry,
+                            data=data,
+                            title=_title_from_data(data),
+                        )
+        languages, language_default = await _probe_languages_for_entry(self.hass, entry)
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_gateway_schema(entry.data, password_optional=True, languages=languages),
+            data_schema=_gateway_schema(
+                entry.data,
+                password_optional=True,
+                languages=languages,
+                language_default=language_default,
+            ),
             errors=errors,
         )
 
@@ -319,17 +330,23 @@ async def _probe_gateway(
     return _GatewayProbe(languages=languages, default_language=default)
 
 
-async def _languages_for_entry(hass: HomeAssistant, entry: ConfigEntry) -> tuple[tuple[str, str], ...]:
+async def _probe_languages_for_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+) -> tuple[tuple[tuple[str, str], ...], str | None]:
+    """Return gateway language options and the computed default for an entry."""
     host = entry.data.get(CONF_WG1000_HOST)
     username = entry.data.get(CONF_WG1000_USERNAME)
     password = entry.data.get(CONF_WG1000_PASSWORD)
     verify = entry.data.get(CONF_WG1000_VERIFY_TLS, False)
     if not isinstance(host, str) or not isinstance(username, str) or not isinstance(password, str):
-        return ()
+        return (), None
     if not isinstance(verify, bool):
-        return ()
+        return (), None
     probe = await _probe_gateway(hass, host, username, password, verify)
-    return probe.languages
+    if probe.error is not None:
+        return (), None
+    return probe.languages, probe.default_language
 
 
 def _gateway_schema(
@@ -337,6 +354,7 @@ def _gateway_schema(
     *,
     password_optional: bool = False,
     languages: tuple[tuple[str, str], ...] = (),
+    language_default: str | None = None,
 ) -> vol.Schema:
     data = defaults or {}
     host = data.get(CONF_WG1000_HOST, "")
@@ -350,8 +368,14 @@ def _gateway_schema(
         vol.Required(CONF_WG1000_VERIFY_TLS, default=bool(verify)): bool,
     }
     if languages:
-        current = data.get(CONF_LANGUAGE, languages[0][0])
-        default = current if isinstance(current, str) else languages[0][0]
+        codes = {code for code, _name in languages}
+        current = data.get(CONF_LANGUAGE)
+        if isinstance(current, str) and current in codes:
+            default = current
+        elif language_default is not None and language_default in codes:
+            default = language_default
+        else:
+            default = languages[0][0]
         schema[vol.Required(CONF_LANGUAGE, default=default)] = _language_selector(languages)
     return vol.Schema(schema)
 

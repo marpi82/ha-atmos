@@ -9,14 +9,18 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, Sen
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from pyatmos_wg1000.protocol import InfoRowType
 
 from .entity import atmos_group_device_info, atmos_hub_device_info
+from .info import InfoGroup
 from .runtime import AtmosRuntime
 from .source import ActiveSource
 from .wiring import runtime_for
 
 _SCAN = timedelta(seconds=30)
+_VALUE_TYPES = {int(InfoRowType.LONG), int(InfoRowType.SHORT)}
 
 
 async def async_setup_entry(
@@ -37,15 +41,53 @@ async def async_setup_entry(
         entities.append(AtmosSerialBytesSensor(entry, runtime))
 
     known: set[tuple[int, int]] = set()
-    for group in runtime.info_groups:
+    known_groups: set[int] = set()
+    _register_info_groups(hass, entry, runtime, runtime.info_groups, known_groups)
+    entities.extend(_info_sensors(entry, runtime, runtime.info_groups, known))
+    async_add_entities(entities)
+
+    @callback
+    def _discover() -> None:
+        _register_info_groups(hass, entry, runtime, runtime.info_groups, known_groups)
+        added = _info_sensors(entry, runtime, runtime.info_groups, known)
+        if added:
+            async_add_entities(added)
+
+    entry.async_on_unload(runtime.add_listener(_discover))
+
+
+def _register_info_groups(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    runtime: AtmosRuntime,
+    groups: tuple[InfoGroup, ...] | list[InfoGroup],
+    known_groups: set[int],
+) -> None:
+    """Ensure every Info ``skupina`` has a child device, even without value rows."""
+    registry = dr.async_get(hass)
+    for group in groups:
+        info = atmos_group_device_info(entry, runtime, skupina=group.skupina, title=group.title)
+        registry.async_get_or_create(config_entry_id=entry.entry_id, **info)
+        known_groups.add(group.skupina)
+
+
+def _info_sensors(
+    entry: ConfigEntry,
+    runtime: AtmosRuntime,
+    groups: tuple[InfoGroup, ...] | list[InfoGroup],
+    known: set[tuple[int, int]],
+) -> list[SensorEntity]:
+    """Build new value sensors for long/short Info rows not yet registered."""
+    added: list[SensorEntity] = []
+    for group in groups:
         for row in group.rows:
-            if row.is_alarm:
+            if row.typ not in _VALUE_TYPES:
                 continue
             key = (row.skupina, row.caption_id)
             if key in known:
                 continue
             known.add(key)
-            entities.append(
+            added.append(
                 AtmosInfoSensor(
                     entry,
                     runtime,
@@ -55,34 +97,7 @@ async def async_setup_entry(
                     name=_entity_name(row.caption, row.text_a, row.text_b),
                 )
             )
-
-    async_add_entities(entities)
-
-    @callback
-    def _discover() -> None:
-        added: list[SensorEntity] = []
-        for group in runtime.info_groups:
-            for row in group.rows:
-                if row.is_alarm:
-                    continue
-                key = (row.skupina, row.caption_id)
-                if key in known:
-                    continue
-                known.add(key)
-                added.append(
-                    AtmosInfoSensor(
-                        entry,
-                        runtime,
-                        skupina=row.skupina,
-                        caption_id=row.caption_id,
-                        group_title=group.title,
-                        name=_entity_name(row.caption, row.text_a, row.text_b),
-                    )
-                )
-        if added:
-            async_add_entities(added)
-
-    entry.async_on_unload(runtime.add_listener(_discover))
+    return added
 
 
 def _entity_name(caption: str, text_a: str, text_b: str) -> str:

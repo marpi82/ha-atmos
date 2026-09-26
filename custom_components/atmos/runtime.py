@@ -121,7 +121,7 @@ class AtmosRuntime:
         rows: dict[tuple[int, int], InfoRow] = {}
         for group in snapshot:
             for row in group.rows:
-                if row.is_alarm:
+                if row.is_alarm or row.typ not in (1, 2):
                     continue
                 rows[(row.skupina, row.caption_id)] = row
         self._info_groups = snapshot
