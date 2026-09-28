@@ -90,15 +90,15 @@ async def pull_gateway(
                     runtime.note_info_groups(resolve_info_dump(update.dump, catalog, own_text))
                     try:
                         records = await client.read_registers(circuit_register_ids())
-                        runtime.note_circuits(
-                            circuits_from_records(records, own_text=own_text, catalog=catalog)
-                        )
+                        runtime.note_circuits(circuits_from_records(records, own_text=own_text, catalog=catalog))
                     except Exception:
                         LOGGER.exception("WG1000 circuit poll failed")
 
             bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-bridge")
             LOGGER.info("WG1000 Info+circuit poll started (language=%s)", catalog.language.code)
             try:
+                # Let the bridge reach ``subscribe()`` before the first dump.
+                await asyncio.sleep(0)
                 await feed.run()
             finally:
                 bridge.cancel()
