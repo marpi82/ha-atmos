@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- WG1000 WebSocket drops no longer leave the integration dead until reload;
+  the poll task re-logins with backoff and resumes Info/circuit updates.
+
 ## [2026.9.0a6] - 2026-09-26
 
 ### Changed

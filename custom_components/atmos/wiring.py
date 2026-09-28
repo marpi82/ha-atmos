@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from pyatmos_wg1000 import AtmosClient, InfoFeed, LanguageCatalog
+from pyatmos_wg1000 import AtmosClient, LanguageCatalog
 
 from .circuit import circuit_register_ids, circuits_from_records
 from .const import (
@@ -26,11 +26,11 @@ from .const import (
     CONF_WG1000_USERNAME,
     CONF_WG1000_VERIFY_TLS,
     DEFAULT_FALLBACK_AFTER,
-    DEFAULT_POLL_INTERVAL,
     DEFAULT_WG1000_PORT,
     DOMAIN,
     PLATFORMS,
 )
+from .gateway_poll import await_cancelled, login_gateway, pull_gateway
 from .info import gateway_language_for_hass, resolve_info_dump
 from .runtime import AtmosRuntime
 from .source import SourceConfig
@@ -39,18 +39,6 @@ if TYPE_CHECKING:
     from pyatmos_serial import AtmosSerialFeed
 
 LOGGER = logging.getLogger(__name__)
-
-
-async def _await_cancelled(task: asyncio.Task[Any]) -> None:
-    """Wait for a cancelled task without using ``contextlib.suppress``.
-
-    CodeQL treats ``suppress(CancelledError): await task`` as an ineffectual
-    statement; an explicit ``except`` with ``return`` keeps the wait visible.
-    """
-    try:
-        await task
-    except asyncio.CancelledError:
-        return
 
 
 def runtime_for(hass: HomeAssistant, entry: ConfigEntry) -> AtmosRuntime:
@@ -178,7 +166,7 @@ async def _start_serial(hass: HomeAssistant, entry: ConfigEntry, runtime: AtmosR
 
     async def _close_serial() -> None:
         listen.cancel()
-        await _await_cancelled(listen)
+        await await_cancelled(listen)
         await feed.stop()
 
     runtime.add_closer(_close_serial)
@@ -199,7 +187,7 @@ async def _listen(feed: AtmosSerialFeed, runtime: AtmosRuntime) -> None:
         raise
     finally:
         bridge.cancel()
-        await _await_cancelled(bridge)
+        await await_cancelled(bridge)
 
 
 async def _bridge_serial(feed: AtmosSerialFeed, runtime: AtmosRuntime) -> None:
@@ -224,9 +212,7 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
         return False
     client = AtmosClient(host, port=port, verify_tls=verify)
     try:
-        await client.connect()
-        await client.hello()
-        result = await client.login(username, password)
+        result = await login_gateway(client, username, password)
     except Exception:
         LOGGER.exception("WG1000 connection failed")
         await client.aclose()
@@ -267,13 +253,13 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
     runtime.bind_write_registers(client.write_registers)
 
     pull = asyncio.create_task(
-        _pull_gateway(client, runtime, catalog, own_text),
+        pull_gateway(client, runtime, catalog, own_text, username=username, password=password),
         name="atmos-wg1000-poll",
     )
 
     async def _close_gateway() -> None:
         pull.cancel()
-        await _await_cancelled(pull)
+        await await_cancelled(pull)
         runtime.bind_write_registers(None)
         with suppress(Exception):
             await client.logout()
@@ -282,40 +268,6 @@ async def _start_gateway(hass: HomeAssistant, entry: ConfigEntry, runtime: Atmos
     runtime.add_closer(_close_gateway)
     runtime.set_gateway_open(True)
     return True
-
-
-async def _pull_gateway(
-    client: AtmosClient,
-    runtime: AtmosRuntime,
-    catalog: LanguageCatalog,
-    own_text: tuple[str, ...],
-) -> None:
-    """Poll Info dumps and homepage circuit registers into the runtime."""
-    try:
-        feed = InfoFeed(client, interval=DEFAULT_POLL_INTERVAL)
-
-        async def _bridge() -> None:
-            async for update in feed.bus.subscribe():
-                runtime.note_info_groups(resolve_info_dump(update.dump, catalog, own_text))
-                try:
-                    records = await client.read_registers(circuit_register_ids())
-                    runtime.note_circuits(circuits_from_records(records, own_text=own_text, catalog=catalog))
-                except Exception:
-                    LOGGER.exception("WG1000 circuit poll failed")
-
-        bridge = asyncio.create_task(_bridge(), name="atmos-wg1000-bridge")
-        LOGGER.info("WG1000 Info+circuit poll started (language=%s)", catalog.language.code)
-        try:
-            await feed.run()
-        finally:
-            bridge.cancel()
-            await _await_cancelled(bridge)
-    except asyncio.CancelledError:
-        raise
-    except Exception:
-        LOGGER.exception("WG1000 poll stopped")
-        runtime.set_gateway_open(False)
-        raise
 
 
 def _entry_language(entry: ConfigEntry) -> str | None:

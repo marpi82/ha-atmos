@@ -34,7 +34,7 @@ uv run --group dev --group test poe validate
 
 CI uploads `coverage.xml` to Codecov when `CODECOV_TOKEN` is set. Repository rulesets are applied with `scripts/apply_github_hardening.sh`. Required checks on `main`: `secrets (gitleaks)`, `security (pip-audit)`, `quality (lint + typecheck)`, `tests (3.13)`, `hassfest`, `HACS Validation`, `build`.
 
-`source.py`, `runtime.py`, `info.py`, `info_map.py`, and `circuit.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
+`source.py`, `runtime.py`, `info.py`, `info_map.py`, `circuit.py`, and `gateway_poll.py` must stay free of Home Assistant imports so pytest can run without `homeassistant` installed.
 
 Keep `manifest.json` library pins aligned with `pyproject.toml`, and `hacs.json` HA minimum aligned with docs (manifest has no HA version field).
 
