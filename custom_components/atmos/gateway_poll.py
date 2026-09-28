@@ -126,8 +126,12 @@ async def pull_gateway(
                         result.blocked,
                         result.retry_after_s,
                     )
+                    with suppress(Exception):
+                        await client.aclose()
                 except asyncio.CancelledError:
                     raise
                 except Exception:
                     LOGGER.exception("WG1000 reconnect failed")
+                    with suppress(Exception):
+                        await client.aclose()
                 delay = min(delay * 2, reconnect_max)
