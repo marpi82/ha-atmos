@@ -214,11 +214,7 @@ async def _run_session(
     try:
         # Let the info bridge reach ``subscribe()`` before the first dump.
         await asyncio.sleep(0)
-        done, _pending = await asyncio.wait(workers, return_when=asyncio.FIRST_EXCEPTION)
-        for task in done:
-            exc = task.exception()
-            if exc is not None:
-                raise exc
+        await asyncio.gather(*workers)
     finally:
         for task in workers:
             task.cancel()

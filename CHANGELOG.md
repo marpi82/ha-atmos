@@ -2,12 +2,18 @@
 
 ## [Unreleased]
 
+## [2026.10.1] - 2026-10-04
+
+First stable release.
+
 ### Changed
 
+- Require `py-atmos-wg1000==2026.10.1` (stock `Pages.js` poll cadence helpers).
 - Poll the Info dump every 1 s (stock Informace-page cadence; was 30 s).
 - Poll homepage circuit registers on the stock ``PrmID*`` buckets parsed from
-  ``Pages.js`` (regime/general/setpoints ~5 s, room temp/humidity ~30 s),
-  with a captured fallback when the UI bundle cannot be downloaded.
+  ``Pages.js`` by ``pyatmos_wg1000`` (regime/general/setpoints ~5 s, room
+  temp/humidity ~30 s), with a captured fallback when the UI bundle cannot
+  be downloaded.
 
 ### Fixed
 

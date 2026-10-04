@@ -14,7 +14,7 @@ Home Assistant custom integration for ATMOS boilers. Today the live path is the 
 
 Serial is primary when both are configured, and only after `decode_frames` emits a register update inside `fallback_after` seconds (default 120). Raw bytes do not count. WG1000 is used when serial is not configured, or when it is configured but not fresh and the gateway session is up.
 
-WG1000 sensors are discovered from the Info page (`skupina` groups via `InfoFeed`). Captions use `LanguageCatalog` / OwnText. Do not invent RS485 framing or WG1000 register ids here — import protocol helpers from `pyatmos_wg1000.protocol`.
+WG1000 sensors are discovered from the Info page (`skupina` groups via `InfoFeed`). Captions use `LanguageCatalog` / OwnText. Do not invent RS485 framing or WG1000 register ids here — import protocol helpers from `pyatmos_wg1000.protocol`. `Pages.js` `PrmID*` cadence is `parse_pages_js_hod16_intervals`; this package only filters that map onto homepage circuit registers.
 
 ## TODO(rs485)
 
