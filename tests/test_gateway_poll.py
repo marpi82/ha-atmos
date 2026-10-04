@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from pyatmos_wg1000.protocol import Hod16, ParamRecord, ParamType, hod16_id
 from pyatmos_wg1000.protocol.data import InfoDump, InfoItem
 
 from custom_components.atmos.gateway_poll import await_cancelled, login_gateway, pull_gateway
@@ -16,6 +18,7 @@ from custom_components.atmos.runtime import AtmosRuntime
 from custom_components.atmos.source import ActiveSource, SourceConfig
 
 _TEST_PASSWORD = "pw-for-test"  # noqa: S105
+_PAGES_FIXTURE = Path(__file__).parent / "fixtures" / "pages_circuit_schedule.js"
 
 
 def test_gateway_poll_import_does_not_load_home_assistant() -> None:
@@ -68,26 +71,51 @@ class _FakeClient:
         login_results: list[_LoginResult] | None = None,
         connect_errors: list[BaseException | None] | None = None,
         circuit_errors: int = 0,
+        fail_first_info: bool = True,
+        pages_js: bytes | BaseException | None = None,
+        circuit_records: dict[int, int] | None = None,
     ) -> None:
         self.fetch_calls = 0
         self.connect_calls = 0
         self.aclose_calls = 0
+        self.download_calls = 0
+        self.read_calls = 0
         self.write_registers = AsyncMock()
         self._login_results = list(login_results or [_LoginResult()])
         self._connect_errors = list(connect_errors or [])
         self._circuit_errors_left = circuit_errors
+        self._fail_first_info = fail_first_info
+        self._pages_js = pages_js
+        self._circuit_records = dict(circuit_records or {})
 
     async def fetch_info(self, ac16: int = 0) -> InfoDump:
         self.fetch_calls += 1
-        if self.fetch_calls == 1:
+        if self._fail_first_info and self.fetch_calls == 1:
             raise ConnectionError("no close frame received or sent")
         return _title_dump(ac16)
 
-    async def read_registers(self, register_ids: Any, **kwargs: Any) -> tuple[()]:
+    async def read_registers(self, register_ids: Any, **kwargs: Any) -> tuple[ParamRecord, ...]:
+        self.read_calls += 1
         if self._circuit_errors_left > 0:
             self._circuit_errors_left -= 1
             raise RuntimeError("circuit read failed")
-        return ()
+        return tuple(
+            ParamRecord(
+                register_id=register_id,
+                kind=ParamType.READ_ONLY,
+                value=self._circuit_records.get(register_id),
+            )
+            for register_id in register_ids
+        )
+
+    async def download_file(self, name: str) -> bytes:
+        self.download_calls += 1
+        assert name == "Pages.js"
+        if isinstance(self._pages_js, BaseException):
+            raise self._pages_js
+        if self._pages_js is None:
+            raise FileNotFoundError("Pages.js missing")
+        return self._pages_js
 
     async def connect(self) -> None:
         self.connect_calls += 1
@@ -244,3 +272,158 @@ async def test_pull_gateway_cancel_during_reconnect_login() -> None:
     task.cancel()
     await await_cancelled(task)
     assert runtime.gateway_open is False
+
+
+@pytest.mark.asyncio
+async def test_pull_gateway_loads_pages_js_schedule_and_polls_circuits() -> None:
+    """Without an override, Pages.js is downloaded and circuit buckets run."""
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
+    obecne = hod16_id(Hod16.O1_OBECNE)
+    client = _FakeClient(
+        fail_first_info=False,
+        pages_js=_PAGES_FIXTURE.read_bytes(),
+        circuit_records={obecne: 0x01},
+    )
+
+    task = asyncio.create_task(
+        pull_gateway(
+            client,  # type: ignore[arg-type]
+            runtime,
+            _FakeCatalog(),  # type: ignore[arg-type]
+            ("Dom",),
+            username="user",
+            password=_TEST_PASSWORD,
+            info_interval=0.01,
+        )
+    )
+    for _ in range(400):
+        await asyncio.sleep(0.01)
+        if client.download_calls >= 1 and runtime.info_groups and runtime.circuits:
+            break
+    else:
+        task.cancel()
+        await await_cancelled(task)
+        pytest.fail(
+            "circuit schedule poll did not publish "
+            f"(download={client.download_calls} reads={client.read_calls} "
+            f"groups={len(runtime.info_groups)} circuits={len(runtime.circuits)})"
+        )
+
+    task.cancel()
+    await await_cancelled(task)
+    assert client.download_calls >= 1
+    assert runtime.circuits[0].name == "Dom"
+    assert runtime.circuits[0].active is True
+
+
+@pytest.mark.asyncio
+async def test_pull_gateway_falls_back_when_pages_js_download_fails() -> None:
+    """Pages.js errors still start the captured fallback circuit schedule."""
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
+    obecne = hod16_id(Hod16.O1_OBECNE)
+    client = _FakeClient(
+        fail_first_info=False,
+        pages_js=ConnectionError("bundle unavailable"),
+        circuit_records={obecne: 0x01},
+    )
+
+    task = asyncio.create_task(
+        pull_gateway(
+            client,  # type: ignore[arg-type]
+            runtime,
+            _FakeCatalog(),  # type: ignore[arg-type]
+            (),
+            username="user",
+            password=_TEST_PASSWORD,
+            info_interval=0.01,
+        )
+    )
+    for _ in range(400):
+        await asyncio.sleep(0.01)
+        if client.download_calls >= 1 and runtime.circuits:
+            break
+    else:
+        task.cancel()
+        await await_cancelled(task)
+        pytest.fail("fallback circuit schedule did not publish")
+
+    task.cancel()
+    await await_cancelled(task)
+    assert runtime.circuits[0].active is True
+
+
+@pytest.mark.asyncio
+async def test_pull_gateway_circuit_bucket_survives_read_errors() -> None:
+    """A failed circuit bucket read is logged and the loop keeps polling."""
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
+    register_id = hod16_id(Hod16.O1_OBECNE)
+    client = _FakeClient(
+        fail_first_info=False,
+        circuit_errors=2,  # seed + first bucket
+        circuit_records={register_id: 0x01},
+    )
+
+    task = asyncio.create_task(
+        pull_gateway(
+            client,  # type: ignore[arg-type]
+            runtime,
+            _FakeCatalog(),  # type: ignore[arg-type]
+            (),
+            username="user",
+            password=_TEST_PASSWORD,
+            info_interval=0.01,
+            circuit_schedule={0.01: (register_id,)},
+        )
+    )
+    for _ in range(400):
+        await asyncio.sleep(0.01)
+        if runtime.circuits:
+            break
+    else:
+        task.cancel()
+        await await_cancelled(task)
+        pytest.fail("circuit bucket never recovered after a read error")
+
+    task.cancel()
+    await await_cancelled(task)
+    assert client.read_calls >= 3
+    assert runtime.circuits[0].active is True
+
+
+@pytest.mark.asyncio
+async def test_pull_gateway_cancels_circuit_bucket_during_read() -> None:
+    """Cancelling while a circuit read is in flight exits the bucket cleanly."""
+    runtime = AtmosRuntime(SourceConfig(serial=False, wg1000=True, fallback_after=10))
+    register_id = hod16_id(Hod16.O1_OBECNE)
+    client = _FakeClient(fail_first_info=False, circuit_records={register_id: 0x01})
+    started = asyncio.Event()
+    reads = 0
+
+    async def _hang_after_seed(register_ids: Any, **kwargs: Any) -> tuple[ParamRecord, ...]:
+        nonlocal reads
+        reads += 1
+        client.read_calls = reads
+        if reads == 1:
+            return (ParamRecord(register_id=register_id, kind=ParamType.READ_ONLY, value=0x01),)
+        started.set()
+        await asyncio.Event().wait()
+        return ()
+
+    client.read_registers = _hang_after_seed  # type: ignore[method-assign]
+
+    task = asyncio.create_task(
+        pull_gateway(
+            client,  # type: ignore[arg-type]
+            runtime,
+            _FakeCatalog(),  # type: ignore[arg-type]
+            (),
+            username="user",
+            password=_TEST_PASSWORD,
+            info_interval=0.01,
+            circuit_schedule={0.01: (register_id,)},
+        )
+    )
+    await started.wait()
+    task.cancel()
+    await await_cancelled(task)
+    assert runtime.circuits[0].active is True

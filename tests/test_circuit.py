@@ -179,9 +179,11 @@ def test_merge_register_words_and_circuits_from_words() -> None:
             kind=ParamType.READ_ONLY,
             value=encode_circuit_regime(regime_preset_index("auto")),
         ),
+        ParamRecord(register_id=hod16_id(Hod16.O2_OBECNE), kind=ParamType.READ_ONLY, value=None),
     ]
     assert merge_register_words(words, first) is True
     assert merge_register_words(words, first) is False
+    assert hod16_id(Hod16.O2_OBECNE) not in words
 
     second = [
         ParamRecord(register_id=hod16_id(Hod16.O1_TEPLOTA), kind=ParamType.READ_ONLY, value=0x80001F00),

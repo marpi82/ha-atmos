@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from pyatmos_wg1000.protocol import Hod16, hod16_id
 
 from custom_components.atmos.ui_schedule import (
@@ -55,3 +56,34 @@ def test_circuit_schedule_fallback_without_pages() -> None:
         Hod16.TUV_TEPLOTY,
     ):
         assert hod16_id(local) in packed
+
+
+def test_parse_pages_js_keeps_shortest_interval_and_skips_unknown() -> None:
+    """Duplicate bindings keep the faster bucket; unknown HOD16 names are ignored."""
+    source = """
+    <span ${Atribut.PrmID5s}="[${HOD16.O1_TEPLOTA}]"></span>
+    <span ${Atribut.PrmID30s}="[${HOD16.O1_TEPLOTA}]"></span>
+    <span ${Atribut.PrmID1s}="[${HOD16.NOT_A_REAL_REGISTER}]"></span>
+    """
+    intervals = parse_pages_js_hod16_intervals(source)
+    assert intervals[Hod16.O1_TEPLOTA] == 5.0
+    assert Hod16.O1_TEPLOTY not in intervals
+
+
+def test_circuit_schedule_from_empty_pages_uses_fallback(caplog: pytest.LogCaptureFixture) -> None:
+    """Pages.js without circuit PrmID bindings falls back and warns."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        schedule = circuit_schedule_from_pages("const nothing = 1;")
+    assert set(schedule) == {5.0, 30.0}
+    assert any("no circuit PrmID bindings" in message for message in caplog.messages)
+
+
+def test_circuit_schedule_fills_missing_locals_from_fallback() -> None:
+    """Parsed Pages.js keeps page intervals and fills gaps from the fallback."""
+    source = '<span ${Atribut.PrmID1s}="[${HOD16.O1_TEPLOTA}]"></span>'
+    schedule = circuit_schedule_from_pages(source)
+    assert hod16_id(Hod16.O1_TEPLOTA) in schedule[1.0]
+    assert hod16_id(Hod16.O1_OBECNE) in schedule[5.0]
+    assert hod16_id(Hod16.O1_VLHKOST) in schedule[30.0]
