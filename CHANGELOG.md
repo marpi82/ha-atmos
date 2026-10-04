@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Poll the Info dump every 1 s (stock Informace-page cadence; was 30 s).
+- Poll homepage circuit registers on the stock ``PrmID*`` buckets parsed from
+  ``Pages.js`` (regime/general/setpoints ~5 s, room temp/humidity ~30 s),
+  with a captured fallback when the UI bundle cannot be downloaded.
+
 ### Fixed
 
 - WG1000 WebSocket drops no longer leave the integration dead until reload;

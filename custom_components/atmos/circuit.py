@@ -166,6 +166,54 @@ def records_by_id(records: Sequence[ParamRecord]) -> Mapping[int, int]:
     return {record.register_id: record.value for record in records if record.value is not None}
 
 
+def merge_register_words(
+    words: dict[int, int],
+    records: Sequence[ParamRecord],
+) -> bool:
+    """Update ``words`` from ``records``. Return whether anything changed.
+
+    Args:
+        words: Mutable id → raw value cache across partial polls.
+        records: Fresh PARAM read response.
+    """
+    changed = False
+    for record in records:
+        if record.value is None:
+            continue
+        if words.get(record.register_id) != record.value:
+            words[record.register_id] = record.value
+            changed = True
+    return changed
+
+
+def circuits_from_words(
+    words: Mapping[int, int],
+    *,
+    own_text: Sequence[str] = (),
+    catalog: TextLookup | None = None,
+    device_ac16: int = 1,
+) -> tuple[CircuitState, ...]:
+    """Build circuit snapshots from a register-word cache.
+
+    Args:
+        words: id → raw value (may be a partial poll merged over time).
+        own_text: OwnText slots for circuit names.
+        catalog: Language tables for empty TUV/CWU OwnText.
+        device_ac16: Device nibble used when packing ids.
+    """
+    from pyatmos_wg1000.protocol import ParamType
+
+    records = tuple(
+        ParamRecord(register_id=register_id, kind=ParamType.READ_ONLY, value=value) for register_id, value in words.items()
+    )
+    return circuits_from_records(
+        records,
+        own_text=own_text,
+        catalog=catalog,
+        device_ac16=device_ac16,
+    )
+
+
 __all__ = [
     "CIRCUIT_COUNT",
     "CIRCUIT_TUV",
@@ -174,6 +222,8 @@ __all__ = [
     "CircuitState",
     "circuit_register_ids",
     "circuits_from_records",
+    "circuits_from_words",
+    "merge_register_words",
     "records_by_id",
     "resolve_circuit_name",
 ]

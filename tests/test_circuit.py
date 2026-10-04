@@ -15,6 +15,8 @@ from pyatmos_wg1000.protocol import (
 from custom_components.atmos.circuit import (
     circuit_register_ids,
     circuits_from_records,
+    circuits_from_words,
+    merge_register_words,
     resolve_circuit_name,
 )
 
@@ -164,3 +166,28 @@ def test_simple_presets_match_regime_menu_order() -> None:
 def test_circuit_register_ids_count() -> None:
     """Five circuits times five register families."""
     assert len(circuit_register_ids()) == 25
+
+
+def test_merge_register_words_and_circuits_from_words() -> None:
+    """Partial polls accumulate into a full circuit snapshot."""
+    words: dict[int, int] = {}
+    general = 0x01
+    first = [
+        ParamRecord(register_id=hod16_id(Hod16.O1_OBECNE), kind=ParamType.READ_ONLY, value=general),
+        ParamRecord(
+            register_id=hod16_id(Hod16.O1_REZIM),
+            kind=ParamType.READ_ONLY,
+            value=encode_circuit_regime(regime_preset_index("auto")),
+        ),
+    ]
+    assert merge_register_words(words, first) is True
+    assert merge_register_words(words, first) is False
+
+    second = [
+        ParamRecord(register_id=hod16_id(Hod16.O1_TEPLOTA), kind=ParamType.READ_ONLY, value=0x80001F00),
+    ]
+    assert merge_register_words(words, second) is True
+    states = circuits_from_words(words)
+    assert len(states) == 1
+    assert states[0].preset == "auto"
+    assert states[0].current_c is not None

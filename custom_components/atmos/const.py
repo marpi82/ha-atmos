@@ -19,7 +19,8 @@ CONF_FALLBACK_AFTER: Final = "fallback_after"
 
 DEFAULT_FALLBACK_AFTER: Final = 120.0
 DEFAULT_WG1000_PORT: Final = 443
-DEFAULT_POLL_INTERVAL: Final = 30.0
+# Stock Informace page requests a new dump every 1 s (see Pages.js Timer).
+DEFAULT_INFO_POLL_INTERVAL: Final = 1.0
 
 __all__ = [
     "CONF_FALLBACK_AFTER",
@@ -32,7 +33,7 @@ __all__ = [
     "CONF_WG1000_USERNAME",
     "CONF_WG1000_VERIFY_TLS",
     "DEFAULT_FALLBACK_AFTER",
-    "DEFAULT_POLL_INTERVAL",
+    "DEFAULT_INFO_POLL_INTERVAL",
     "DEFAULT_WG1000_PORT",
     "DOMAIN",
     "PLATFORMS",
