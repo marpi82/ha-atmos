@@ -41,9 +41,11 @@ jobs:
           fi
           echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
 
-      # Without this tree the uploader discards every file and Codecov stores
-      # an empty report (state error, no codecov/patch). Read-only: nothing
-      # from the pull request is executed.
+      # The uploader needs this tree or it discards the report. The pinned
+      # checkout refuses a fork head from workflow_run unless this opt-in is
+      # set. Nothing from the pull request is executed. Symlinks are removed
+      # so a fork cannot redirect later writes or the uploader, and the
+      # artifact is saved outside the checkout.
       - name: Check out the pull request commit
         if: steps.tests.outputs.conclusion == 'success'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -52,14 +54,17 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           persist-credentials: false
+          allow-unsafe-pr-checkout: true
 
-      - name: Use the base Codecov config
+      - name: Drop fork symlinks and use the base Codecov config
         if: steps.tests.outputs.conclusion == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
+          find . -path ./.git -prune -o -type l -delete
+          rm -f codecov.yml
           gh api "repos/${GITHUB_REPOSITORY}/contents/codecov.yml?ref=${DEFAULT_BRANCH}" --jq .content | base64 -d > codecov.yml
 
       - name: Download coverage
@@ -67,7 +72,7 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: coverage
-          path: coverage
+          path: ${{ runner.temp }}/coverage
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -104,7 +109,8 @@ jobs:
         if: steps.tests.outputs.conclusion == 'success'
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
         with:
-          files: coverage/coverage.xml
+          files: ${{ runner.temp }}/coverage/coverage.xml
+          disable_search: true
           flags: unittests
           name: ha-atmos
           fail_ci_if_error: true
