@@ -1,7 +1,9 @@
 name: Pull request labeler
 
+# pull_request tokens from forks are read-only, so labeling has to run as
+# pull_request_target (this file from the base branch, with write access).
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, reopened, synchronize]
 
 permissions:
@@ -13,8 +15,13 @@ jobs:
     name: Label changed paths
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the repository
+      - name: Check out the base branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Base SHA only. Checking out the head would run a write token against
+          # untrusted code.
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
 
       - name: Run path labeler
         uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0

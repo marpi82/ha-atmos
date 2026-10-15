@@ -1,0 +1,92 @@
+name: Codecov
+
+# CI on a fork cannot read CODECOV_TOKEN, and tokenless uploads do not report
+# codecov/patch on protected branches. This workflow runs from the base branch
+# after CI and only uploads the coverage artifact. It does not check out or
+# execute the pull request.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  upload:
+    name: Upload coverage
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check tests job
+        id: tests
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          conclusion="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs[] | select(.name=="tests (3.13)") | .conclusion')"
+          if [[ -z "$conclusion" ]]; then
+            echo "tests (3.13) job not found on run ${RUN_ID}" >&2
+            exit 1
+          fi
+          if [[ "$(printf '%s\n' "$conclusion" | wc -l)" -ne 1 ]]; then
+            echo "expected one tests job, got: ${conclusion}" >&2
+            exit 1
+          fi
+          echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
+
+      - name: Download coverage
+        if: steps.tests.outputs.conclusion == 'success'
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: coverage
+          path: coverage
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve pull request
+        id: pr
+        if: steps.tests.outputs.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          owner="${HEAD_REPO%%/*}"
+          if [[ -z "$owner" || -z "$HEAD_BRANCH" || ! "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "workflow_run is missing a usable head repository, branch, or sha" >&2
+            exit 1
+          fi
+          number="$(gh api --paginate -X GET "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f "head=${owner}:${HEAD_BRANCH}" \
+            -f state=open \
+            --jq ".[] | select(.head.sha==\"${HEAD_SHA}\") | .number")"
+          if [[ -z "$number" ]]; then
+            echo "No open pull request for ${owner}:${HEAD_BRANCH} at ${HEAD_SHA}" >&2
+            exit 1
+          fi
+          if [[ "$(printf '%s\n' "$number" | wc -l)" -ne 1 || ! "$number" =~ ^[0-9]+$ ]]; then
+            echo "Expected one pull request number for ${HEAD_SHA}, got: ${number}" >&2
+            exit 1
+          fi
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload coverage to Codecov
+        if: steps.tests.outputs.conclusion == 'success'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        with:
+          files: coverage/coverage.xml
+          flags: unittests
+          name: ha-atmos
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          override_commit: ${{ github.event.workflow_run.head_sha }}
+          override_pr: ${{ steps.pr.outputs.number }}
