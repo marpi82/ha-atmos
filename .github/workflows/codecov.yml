@@ -63,7 +63,8 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          find . -path ./.git -prune -o -type l -delete
+          # -delete implies -depth, which disables -prune and makes find exit 1.
+          find . -path ./.git -prune -o -type l -exec rm -f {} +
           rm -f codecov.yml
           gh api "repos/${GITHUB_REPOSITORY}/contents/codecov.yml?ref=${DEFAULT_BRANCH}" --jq .content | base64 -d > codecov.yml
 
