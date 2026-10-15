@@ -90,3 +90,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           override_commit: ${{ github.event.workflow_run.head_sha }}
           override_pr: ${{ steps.pr.outputs.number }}
+          # workflow_run has GITHUB_REF on the default branch and an empty
+          # GITHUB_HEAD_REF, so Codecov would file this report under main.
+          override_branch: ${{ github.event.workflow_run.head_branch }}
