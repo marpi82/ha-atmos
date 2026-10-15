@@ -2,8 +2,8 @@ name: Codecov
 
 # CI on a fork cannot read CODECOV_TOKEN, and tokenless uploads do not report
 # codecov/patch on protected branches. This workflow runs from the base branch
-# after CI and only uploads the coverage artifact. It does not check out or
-# execute the pull request.
+# after CI and only uploads the coverage artifact. It checks the pull request
+# out so Codecov can map report paths, and it does not execute that code.
 on:
   workflow_run:
     workflows: ["CI"]
@@ -40,6 +40,27 @@ jobs:
             exit 1
           fi
           echo "conclusion=${conclusion}" >> "$GITHUB_OUTPUT"
+
+      # Without this tree the uploader discards every file and Codecov stores
+      # an empty report (state error, no codecov/patch). Read-only: nothing
+      # from the pull request is executed.
+      - name: Check out the pull request commit
+        if: steps.tests.outputs.conclusion == 'success'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Use the base Codecov config
+        if: steps.tests.outputs.conclusion == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GITHUB_REPOSITORY}/contents/codecov.yml?ref=${DEFAULT_BRANCH}" --jq .content | base64 -d > codecov.yml
 
       - name: Download coverage
         if: steps.tests.outputs.conclusion == 'success'
