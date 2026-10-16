@@ -124,6 +124,20 @@
               "reduced": "Reduced",
               "standby": "Standby"
             }
+          },
+          "regime_end_time": {
+            "name": "Regime ends at"
+          },
+          "regime_end_date": {
+            "name": "Regime ends on"
+          },
+          "week_program": {
+            "name": "Week program",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -135,6 +149,67 @@
       "setpoint_reduced": {
         "name": "Reduced setpoint"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Set regime",
+      "description": "Switch the circuit regime. Holiday, absence, and visit end on their own and return to the permanent regime.",
+      "fields": {
+        "preset": {
+          "name": "Regime",
+          "description": "Regime to switch to."
+        },
+        "until": {
+          "name": "Until",
+          "description": "End of a holiday (date), absence, or visit (time later today, like the WG1000 dialog). Only for those three regimes."
+        },
+        "week_program": {
+          "name": "Week program",
+          "description": "Weekly program for auto or summer. Leave empty to keep the current one."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Holiday",
+        "absence": "Absence",
+        "visit": "Visit",
+        "auto": "Auto",
+        "summer": "Summer",
+        "comfort": "Comfort",
+        "reduced": "Reduced",
+        "standby": "Standby"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Unknown regime."
+    },
+    "week_program_not_supported": {
+      "message": "A week program applies only to auto and summer."
+    },
+    "until_not_supported": {
+      "message": "An end time applies only to holiday, absence, and visit."
+    },
+    "until_required": {
+      "message": "Holiday, absence, and visit need an end. Use the atmos.set_regime action with until."
+    },
+    "until_in_past": {
+      "message": "The end is already in the past."
+    },
+    "until_not_today": {
+      "message": "Absence and visit can only end later today. The controller stores a time of day without a date."
     }
   }
 }

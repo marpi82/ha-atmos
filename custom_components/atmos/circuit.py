@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
 from pyatmos_wg1000.protocol import (
+    CircuitRegime,
     Hod16,
     ParamRecord,
     TextLookup,
@@ -14,7 +16,11 @@ from pyatmos_wg1000.protocol import (
     decode_circuit_general,
     decode_circuit_regime,
     decode_packed_setpoints,
+    encode_circuit_regime,
+    encode_regime_end_date,
+    encode_regime_end_time,
     hod16_id,
+    regime_preset_index,
 )
 
 # O1..O4 then TUV — matches Pages.js homepage circuit order.
@@ -42,6 +48,18 @@ SIMPLE_PRESETS = (
     "reduced",
     "standby",
 )
+TIMED_PRESETS = ("holiday", "absence", "visit")
+WEEK_PROGRAM_PRESETS = ("auto", "summer")
+WEEK_PROGRAMS = ("a", "b", "c")
+
+
+class RegimeRequestError(ValueError):
+    """Invalid regime request. ``key`` is the translation key."""
+
+    def __init__(self, key: str) -> None:
+        """Init with a translation key."""
+        super().__init__(key)
+        self.key = key
 
 
 @dataclass(frozen=True)
@@ -58,6 +76,7 @@ class CircuitState:
     humidity: float | None
     comfort_c: float | None
     reduced_c: float | None
+    regime: CircuitRegime | None = None
 
     @property
     def active_setpoint_c(self) -> float | None:
@@ -65,6 +84,64 @@ class CircuitState:
         if self.temp_type == _TEMP_TYPE_REDUCED:
             return self.reduced_c
         return self.comfort_c
+
+
+def regime_word(
+    preset: str,
+    *,
+    now: datetime,
+    until: datetime | None = None,
+    week_program: str | None = None,
+    current: CircuitRegime | None = None,
+) -> int:
+    """Build the ``O*_REZIM`` word to write.
+
+    Absence/visit only store a time of day, so ``until`` has to be later today.
+    Auto/summer keep the current week program unless one is given.
+    """
+    if preset not in SIMPLE_PRESETS:
+        raise RegimeRequestError("unknown_preset")
+    if week_program is not None and (preset not in WEEK_PROGRAM_PRESETS or week_program not in WEEK_PROGRAMS):
+        raise RegimeRequestError("week_program_not_supported")
+    if preset not in TIMED_PRESETS:
+        if until is not None:
+            raise RegimeRequestError("until_not_supported")
+        week_prog = 0
+        if week_program is not None:
+            week_prog = WEEK_PROGRAMS.index(week_program)
+        elif preset in WEEK_PROGRAM_PRESETS and current is not None and current.preset in WEEK_PROGRAM_PRESETS:
+            week_prog = current.week_prog
+        return encode_circuit_regime(regime_preset_index(preset), week_prog=week_prog)
+
+    if until is None:
+        raise RegimeRequestError("until_required")
+    end = until.astimezone(now.tzinfo)
+    if preset == "holiday":
+        if end.date() < now.date():
+            raise RegimeRequestError("until_in_past")
+        date_time = encode_regime_end_date(end.date())
+    else:
+        end = end.replace(second=0, microsecond=0)
+        if end <= now:
+            raise RegimeRequestError("until_in_past")
+        if end.date() != now.date():
+            raise RegimeRequestError("until_not_today")
+        date_time = encode_regime_end_time(end.time())
+    return encode_circuit_regime(regime_preset_index(preset), date_time=date_time)
+
+
+def regime_attributes(regime: CircuitRegime | None) -> dict[str, str]:
+    """Climate attributes for the regime end and week program."""
+    if regime is None:
+        return {}
+    attributes: dict[str, str] = {}
+    if regime.end_time is not None:
+        attributes["regime_end_time"] = regime.end_time.strftime("%H:%M")
+    if regime.end_date is not None:
+        attributes["regime_end_date"] = regime.end_date.isoformat()
+    if regime.preset in WEEK_PROGRAM_PRESETS and regime.week_prog < len(WEEK_PROGRAMS):
+        attributes["week_program"] = WEEK_PROGRAMS[regime.week_prog]
+    return attributes
 
 
 def circuit_register_ids(*, device_ac16: int = 1) -> tuple[int, ...]:
@@ -134,8 +211,8 @@ def circuits_from_records(
         if general_word is None:
             continue
         general = decode_circuit_general(general_word)
-        regime_word = by_id.get(hod16_id(_REZIM[index], device=device))
-        preset = decode_circuit_regime(regime_word).preset if regime_word is not None else None
+        rezim_word = by_id.get(hod16_id(_REZIM[index], device=device))
+        regime = decode_circuit_regime(rezim_word) if rezim_word is not None else None
         temp_word = by_id.get(hod16_id(_TEPLOTA[index], device=device))
         humid_word = by_id.get(hod16_id(_VLHKOST[index], device=device))
         set_word = by_id.get(hod16_id(_TEPLOTY[index], device=device))
@@ -151,11 +228,12 @@ def circuits_from_records(
                 active=general.active,
                 humidity_supported=general.humidity,
                 temp_type=general.temp_type,
-                preset=preset,
+                preset=regime.preset if regime is not None else None,
                 current_c=decode_acd_temperature(temp_word) if temp_word is not None else None,
                 humidity=(decode_acd_quantity(humid_word) if general.humidity and humid_word is not None else None),
                 comfort_c=comfort,
                 reduced_c=reduced,
+                regime=regime,
             )
         )
     return tuple(states)
@@ -218,12 +296,18 @@ __all__ = [
     "CIRCUIT_COUNT",
     "CIRCUIT_TUV",
     "SIMPLE_PRESETS",
+    "TIMED_PRESETS",
     "TUV_CATALOG_KEY",
+    "WEEK_PROGRAMS",
+    "WEEK_PROGRAM_PRESETS",
     "CircuitState",
+    "RegimeRequestError",
     "circuit_register_ids",
     "circuits_from_records",
     "circuits_from_words",
     "merge_register_words",
     "records_by_id",
+    "regime_attributes",
+    "regime_word",
     "resolve_circuit_name",
 ]

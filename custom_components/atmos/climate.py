@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
+from datetime import datetime, time
+from typing import Any, ClassVar
 
+import voluptuous as vol
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -12,16 +14,27 @@ from homeassistant.components.climate import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 from pyatmos_wg1000.protocol import (
     Hod16,
-    encode_circuit_regime,
     encode_packed_setpoints,
     hod16_id,
-    regime_preset_index,
 )
 
-from .circuit import CIRCUIT_TUV, SIMPLE_PRESETS, CircuitState
+from .circuit import (
+    CIRCUIT_TUV,
+    SIMPLE_PRESETS,
+    WEEK_PROGRAMS,
+    CircuitState,
+    RegimeRequestError,
+    regime_attributes,
+    regime_word,
+)
+from .const import DOMAIN
 from .entity import atmos_circuit_device_info, ensure_circuit_device, ensure_hub_device
 from .runtime import AtmosRuntime
 from .source import ActiveSource
@@ -29,6 +42,16 @@ from .wiring import runtime_for
 
 _TEPLOTY = (Hod16.O1_TEPLOTY, Hod16.O2_TEPLOTY, Hod16.O3_TEPLOTY, Hod16.O4_TEPLOTY, Hod16.TUV_TEPLOTY)
 _REZIM = (Hod16.O1_REZIM, Hod16.O2_REZIM, Hod16.O3_REZIM, Hod16.O4_REZIM, Hod16.TUV_REZIM)
+
+SERVICE_SET_REGIME = "set_regime"
+ATTR_PRESET = "preset"
+ATTR_UNTIL = "until"
+ATTR_WEEK_PROGRAM = "week_program"
+SET_REGIME_SCHEMA: dict[vol.Marker, Any] = {
+    vol.Required(ATTR_PRESET): vol.In(SIMPLE_PRESETS),
+    vol.Optional(ATTR_UNTIL): vol.Any(cv.datetime, cv.time),
+    vol.Optional(ATTR_WEEK_PROGRAM): vol.In(WEEK_PROGRAMS),
+}
 
 
 async def async_setup_entry(
@@ -41,6 +64,11 @@ async def async_setup_entry(
     if not runtime.config.wg1000:
         return
     hub = ensure_hub_device(hass, entry, runtime)
+    entity_platform.async_get_current_platform().async_register_entity_service(
+        SERVICE_SET_REGIME,
+        SET_REGIME_SCHEMA,
+        "async_set_regime",
+    )
     known: set[int] = set()
     entities = _climate_entities(hass, entry, runtime, hub, known)
     if entities:
@@ -179,11 +207,39 @@ class AtmosCircuitClimate(ClimateEntity):
         word = encode_packed_setpoints(comfort, reduced)
         await self._runtime.write_registers([(hod16_id(_TEPLOTY[self._index]), word)])
 
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return regime end / week program."""
+        state = self._state()
+        return regime_attributes(None if state is None else state.regime)
+
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        """Write a simple permanent regime."""
-        if preset_mode not in SIMPLE_PRESETS:
-            return
-        word = encode_circuit_regime(regime_preset_index(preset_mode))
+        """Set a regime without an end."""
+        await self.async_set_regime(preset=preset_mode)
+
+    async def async_set_regime(
+        self,
+        preset: str,
+        until: datetime | time | None = None,
+        week_program: str | None = None,
+    ) -> None:
+        """Handle the ``atmos.set_regime`` action."""
+        now = dt_util.now()
+        if isinstance(until, time):
+            until = datetime.combine(now.date(), until, tzinfo=now.tzinfo)
+        elif until is not None and until.tzinfo is None:
+            until = until.replace(tzinfo=dt_util.get_default_time_zone())
+        state = self._state()
+        try:
+            word = regime_word(
+                preset,
+                now=now,
+                until=until,
+                week_program=week_program,
+                current=None if state is None else state.regime,
+            )
+        except RegimeRequestError as err:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key=err.key) from err
         await self._runtime.write_registers([(hod16_id(_REZIM[self._index]), word)])
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:

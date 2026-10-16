@@ -1,0 +1,34 @@
+set_regime:
+  target:
+    entity:
+      integration: atmos
+      domain: climate
+  fields:
+    preset:
+      required: true
+      example: visit
+      selector:
+        select:
+          translation_key: preset
+          options:
+            - holiday
+            - absence
+            - visit
+            - auto
+            - summer
+            - comfort
+            - reduced
+            - standby
+    until:
+      example: "22:00"
+      selector:
+        datetime:
+    week_program:
+      example: a
+      selector:
+        select:
+          translation_key: week_program
+          options:
+            - a
+            - b
+            - c

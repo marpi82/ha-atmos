@@ -15,6 +15,20 @@
               "reduced": "Útlum",
               "standby": "Pohotovost"
             }
+          },
+          "regime_end_time": {
+            "name": "Režim končí v"
+          },
+          "regime_end_date": {
+            "name": "Režim končí dne"
+          },
+          "week_program": {
+            "name": "Týdenní program",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Teplota útlum"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Nastavit režim",
+      "description": "Přepne režim okruhu. Dovolená, nepřítomnost a návštěva skončí samy a vrátí se do trvalého režimu.",
+      "fields": {
+        "preset": {
+          "name": "Režim",
+          "description": "Režim, na který se má přepnout."
+        },
+        "until": {
+          "name": "Do",
+          "description": "Konec dovolené (datum), nepřítomnosti nebo návštěvy (čas později dnes, jako v dialogu WG1000). Jen pro tyto tři režimy."
+        },
+        "week_program": {
+          "name": "Týdenní program",
+          "description": "Týdenní program pro auto nebo léto. Prázdné ponechá současný."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Dovolená",
+        "absence": "Nepřítomnost",
+        "visit": "Návštěva",
+        "auto": "Auto",
+        "summer": "Léto",
+        "comfort": "Komfort",
+        "reduced": "Útlum",
+        "standby": "Pohotovost"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Neznámý režim."
+    },
+    "week_program_not_supported": {
+      "message": "Týdenní program platí jen pro auto a léto."
+    },
+    "until_not_supported": {
+      "message": "Konec lze nastavit jen pro dovolenou, nepřítomnost a návštěvu."
+    },
+    "until_required": {
+      "message": "Dovolená, nepřítomnost a návštěva potřebují konec. Použijte akci atmos.set_regime s parametrem until."
+    },
+    "until_in_past": {
+      "message": "Konec už je v minulosti."
+    },
+    "until_not_today": {
+      "message": "Nepřítomnost a návštěva mohou skončit jen později dnes. Regulátor ukládá čas bez data."
     }
   }
 }

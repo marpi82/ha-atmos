@@ -37,6 +37,23 @@ Diagnostic entities:
 WG1000 entities: Info page values (per `skupina` child device), plus one
 circuit device each for O1–O4 / TUV with climate and setpoint numbers.
 
+### Timed regimes
+
+Holiday, absence and visit need an end, so set them with `atmos.set_regime`:
+
+```yaml
+action: atmos.set_regime
+target:
+  entity_id: climate.house
+data:
+  preset: visit
+  until: "22:00"
+```
+
+* Absence / visit: `until` is a time later today (the controller has no date for these).
+* Holiday: `until` is the last day, e.g. `"2026-10-20"`.
+* Auto / summer: optional `week_program` (`a`, `b`, `c`), otherwise the current one is kept.
+
 ## Installation
 
 ### HACS (recommended)
