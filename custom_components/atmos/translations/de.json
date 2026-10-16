@@ -15,6 +15,20 @@
               "reduced": "Absenkung",
               "standby": "Bereitschaft"
             }
+          },
+          "regime_end_time": {
+            "name": "Regime endet um"
+          },
+          "regime_end_date": {
+            "name": "Regime endet am"
+          },
+          "week_program": {
+            "name": "Wochenprogramm",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Absenk-Sollwert"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Regime einstellen",
+      "description": "Schaltet das Kreisregime um. Urlaub, Abwesenheit und Besuch enden von selbst und kehren zum Dauerregime zurück.",
+      "fields": {
+        "preset": {
+          "name": "Regime",
+          "description": "Regime, zu dem gewechselt wird."
+        },
+        "until": {
+          "name": "Bis",
+          "description": "Ende von Urlaub (Datum), Abwesenheit oder Besuch (Uhrzeit später heute, wie im WG1000-Dialog). Nur für diese drei Regime."
+        },
+        "week_program": {
+          "name": "Wochenprogramm",
+          "description": "Wochenprogramm für Auto oder Sommer. Leer lässt das aktuelle bestehen."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Urlaub",
+        "absence": "Abwesenheit",
+        "visit": "Besuch",
+        "auto": "Auto",
+        "summer": "Sommer",
+        "comfort": "Komfort",
+        "reduced": "Absenkung",
+        "standby": "Bereitschaft"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Unbekanntes Regime."
+    },
+    "week_program_not_supported": {
+      "message": "Ein Wochenprogramm gilt nur für Auto und Sommer."
+    },
+    "until_not_supported": {
+      "message": "Ein Ende lässt sich nur für Urlaub, Abwesenheit und Besuch einstellen."
+    },
+    "until_required": {
+      "message": "Urlaub, Abwesenheit und Besuch brauchen ein Ende. Verwenden Sie die Aktion atmos.set_regime mit until."
+    },
+    "until_in_past": {
+      "message": "Das Ende liegt bereits in der Vergangenheit."
+    },
+    "until_not_today": {
+      "message": "Abwesenheit und Besuch können nur später heute enden. Der Regler speichert eine Uhrzeit ohne Datum."
     }
   }
 }

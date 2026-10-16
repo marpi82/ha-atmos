@@ -15,6 +15,20 @@
               "reduced": "Redus",
               "standby": "Așteptare"
             }
+          },
+          "regime_end_time": {
+            "name": "Regimul se termină la"
+          },
+          "regime_end_date": {
+            "name": "Regimul se termină pe"
+          },
+          "week_program": {
+            "name": "Program săptămânal",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Setpoint redus"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Setează regimul",
+      "description": "Comută regimul circuitului. Vacanța, absența și vizita se termină singure și revin la regimul permanent.",
+      "fields": {
+        "preset": {
+          "name": "Regim",
+          "description": "Regimul la care se comută."
+        },
+        "until": {
+          "name": "Până la",
+          "description": "Sfârșitul vacanței (dată), al absenței sau al vizitei (oră mai târziu azi, ca în dialogul WG1000). Doar pentru aceste trei regimuri."
+        },
+        "week_program": {
+          "name": "Program săptămânal",
+          "description": "Program săptămânal pentru auto sau vară. Gol păstrează cel curent."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Vacanță",
+        "absence": "Absență",
+        "visit": "Vizită",
+        "auto": "Auto",
+        "summer": "Vară",
+        "comfort": "Confort",
+        "reduced": "Redus",
+        "standby": "Așteptare"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Regim necunoscut."
+    },
+    "week_program_not_supported": {
+      "message": "Un program săptămânal se aplică doar la auto și vară."
+    },
+    "until_not_supported": {
+      "message": "Un sfârșit se poate seta doar pentru vacanță, absență și vizită."
+    },
+    "until_required": {
+      "message": "Vacanța, absența și vizita au nevoie de un sfârșit. Folosiți acțiunea atmos.set_regime cu until."
+    },
+    "until_in_past": {
+      "message": "Sfârșitul este deja în trecut."
+    },
+    "until_not_today": {
+      "message": "Absența și vizita se pot termina doar mai târziu azi. Regulatorul salvează o oră fără dată."
     }
   }
 }

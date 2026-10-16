@@ -15,6 +15,20 @@
               "reduced": "Ograniczenie",
               "standby": "Czuwanie"
             }
+          },
+          "regime_end_time": {
+            "name": "Reżim kończy się o"
+          },
+          "regime_end_date": {
+            "name": "Reżim kończy się dnia"
+          },
+          "week_program": {
+            "name": "Program tygodniowy",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Temperatura ograniczenie"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Ustaw reżim",
+      "description": "Przełącza reżim obiegu. Wakacje, nieobecność i wizyta kończą się same i wracają do trwałego reżimu.",
+      "fields": {
+        "preset": {
+          "name": "Reżim",
+          "description": "Reżim, na który przełączyć."
+        },
+        "until": {
+          "name": "Do",
+          "description": "Koniec wakacji (data), nieobecności lub wizyty (godzina później dziś, jak w oknie WG1000). Tylko dla tych trzech reżimów."
+        },
+        "week_program": {
+          "name": "Program tygodniowy",
+          "description": "Program tygodniowy dla auto lub lato. Puste zostawia obecny."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Wakacje",
+        "absence": "Nieobecność",
+        "visit": "Wizyta",
+        "auto": "Auto",
+        "summer": "Lato",
+        "comfort": "Komfort",
+        "reduced": "Ograniczenie",
+        "standby": "Czuwanie"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Nieznany reżim."
+    },
+    "week_program_not_supported": {
+      "message": "Program tygodniowy dotyczy tylko auto i lato."
+    },
+    "until_not_supported": {
+      "message": "Koniec można ustawić tylko dla wakacji, nieobecności i wizyty."
+    },
+    "until_required": {
+      "message": "Wakacje, nieobecność i wizyta wymagają końca. Użyj akcji atmos.set_regime z parametrem until."
+    },
+    "until_in_past": {
+      "message": "Koniec jest już w przeszłości."
+    },
+    "until_not_today": {
+      "message": "Nieobecność i wizyta mogą skończyć się tylko później dziś. Sterownik zapisuje godzinę bez daty."
     }
   }
 }

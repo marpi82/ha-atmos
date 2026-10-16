@@ -15,6 +15,20 @@
               "reduced": "Reduzido",
               "standby": "Espera"
             }
+          },
+          "regime_end_time": {
+            "name": "O regime termina às"
+          },
+          "regime_end_date": {
+            "name": "O regime termina a"
+          },
+          "week_program": {
+            "name": "Programa semanal",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Setpoint reduzido"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Definir regime",
+      "description": "Muda o regime do circuito. Férias, ausência e visita terminam sozinhas e voltam ao regime permanente.",
+      "fields": {
+        "preset": {
+          "name": "Regime",
+          "description": "Regime para o qual mudar."
+        },
+        "until": {
+          "name": "Até",
+          "description": "Fim das férias (data), da ausência ou da visita (hora mais tarde hoje, como no diálogo WG1000). Só para esses três regimes."
+        },
+        "week_program": {
+          "name": "Programa semanal",
+          "description": "Programa semanal para auto ou verão. Vazio mantém o atual."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Férias",
+        "absence": "Ausência",
+        "visit": "Visita",
+        "auto": "Auto",
+        "summer": "Verão",
+        "comfort": "Conforto",
+        "reduced": "Reduzido",
+        "standby": "Espera"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Regime desconhecido."
+    },
+    "week_program_not_supported": {
+      "message": "Um programa semanal aplica-se só a auto e verão."
+    },
+    "until_not_supported": {
+      "message": "Um fim só pode ser definido para férias, ausência e visita."
+    },
+    "until_required": {
+      "message": "Férias, ausência e visita precisam de um fim. Use a ação atmos.set_regime com until."
+    },
+    "until_in_past": {
+      "message": "O fim já está no passado."
+    },
+    "until_not_today": {
+      "message": "A ausência e a visita só podem terminar mais tarde hoje. O controlador guarda uma hora sem data."
     }
   }
 }
