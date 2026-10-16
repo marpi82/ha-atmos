@@ -15,6 +15,20 @@
               "reduced": "Znižano",
               "standby": "Pripravljenost"
             }
+          },
+          "regime_end_time": {
+            "name": "Režim se konča ob"
+          },
+          "regime_end_date": {
+            "name": "Režim se konča"
+          },
+          "week_program": {
+            "name": "Tedenski program",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Nastavitev znižano"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Nastavi režim",
+      "description": "Preklopi režim kroga. Počitnice, odsotnost in obisk se končajo sami in se vrnejo v trajni režim.",
+      "fields": {
+        "preset": {
+          "name": "Režim",
+          "description": "Režim, na katerega preklopiti."
+        },
+        "until": {
+          "name": "Do",
+          "description": "Konec počitnic (datum), odsotnosti ali obiska (ura pozneje danes, kot v oknu WG1000). Samo za te tri režime."
+        },
+        "week_program": {
+          "name": "Tedenski program",
+          "description": "Tedenski program za avto ali poletje. Prazno obdrži trenutnega."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Počitnice",
+        "absence": "Odsotnost",
+        "visit": "Obisk",
+        "auto": "Avto",
+        "summer": "Poletje",
+        "comfort": "Udobje",
+        "reduced": "Znižano",
+        "standby": "Pripravljenost"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Neznan režim."
+    },
+    "week_program_not_supported": {
+      "message": "Tedenski program velja samo za avto in poletje."
+    },
+    "until_not_supported": {
+      "message": "Konec je mogoče nastaviti samo za počitnice, odsotnost in obisk."
+    },
+    "until_required": {
+      "message": "Počitnice, odsotnost in obisk potrebujejo konec. Uporabite dejanje atmos.set_regime s parametrom until."
+    },
+    "until_in_past": {
+      "message": "Konec je že v preteklosti."
+    },
+    "until_not_today": {
+      "message": "Odsotnost in obisk se lahko končata samo pozneje danes. Regulator shrani uro brez datuma."
     }
   }
 }

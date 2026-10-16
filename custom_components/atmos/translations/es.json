@@ -15,6 +15,20 @@
               "reduced": "Reducido",
               "standby": "Espera"
             }
+          },
+          "regime_end_time": {
+            "name": "El régimen termina a las"
+          },
+          "regime_end_date": {
+            "name": "El régimen termina el"
+          },
+          "week_program": {
+            "name": "Programa semanal",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Consigna reducido"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Establecer régimen",
+      "description": "Cambia el régimen del circuito. Vacaciones, ausencia y visita terminan solas y vuelven al régimen permanente.",
+      "fields": {
+        "preset": {
+          "name": "Régimen",
+          "description": "Régimen al que cambiar."
+        },
+        "until": {
+          "name": "Hasta",
+          "description": "Fin de las vacaciones (fecha), la ausencia o la visita (hora más tarde hoy, como en el diálogo de WG1000). Solo para esos tres regímenes."
+        },
+        "week_program": {
+          "name": "Programa semanal",
+          "description": "Programa semanal para auto o verano. Vacío mantiene el actual."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Vacaciones",
+        "absence": "Ausencia",
+        "visit": "Visita",
+        "auto": "Auto",
+        "summer": "Verano",
+        "comfort": "Confort",
+        "reduced": "Reducido",
+        "standby": "Espera"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Régimen desconocido."
+    },
+    "week_program_not_supported": {
+      "message": "Un programa semanal solo vale para auto y verano."
+    },
+    "until_not_supported": {
+      "message": "Un final solo se puede fijar para vacaciones, ausencia y visita."
+    },
+    "until_required": {
+      "message": "Vacaciones, ausencia y visita necesitan un final. Use la acción atmos.set_regime con until."
+    },
+    "until_in_past": {
+      "message": "El final ya está en el pasado."
+    },
+    "until_not_today": {
+      "message": "La ausencia y la visita solo pueden terminar más tarde hoy. El regulador guarda una hora sin fecha."
     }
   }
 }

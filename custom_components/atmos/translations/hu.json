@@ -15,6 +15,20 @@
               "reduced": "Csökkentett",
               "standby": "Készenlét"
             }
+          },
+          "regime_end_time": {
+            "name": "Az üzemmód ekkor ér véget"
+          },
+          "regime_end_date": {
+            "name": "Az üzemmód ezen a napon ér véget"
+          },
+          "week_program": {
+            "name": "Heti program",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Csökkentett alapjel"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Üzemmód beállítása",
+      "description": "Átkapcsolja a kör üzemmódját. A szabadság, a távollét és a látogatás magától véget ér, és visszatér az állandó üzemmódba.",
+      "fields": {
+        "preset": {
+          "name": "Üzemmód",
+          "description": "Az üzemmód, amelyre vált."
+        },
+        "until": {
+          "name": "Eddig",
+          "description": "A szabadság (dátum), a távollét vagy a látogatás (későbbi időpont ma, mint a WG1000 ablakban) vége. Csak ehhez a három üzemmódhoz."
+        },
+        "week_program": {
+          "name": "Heti program",
+          "description": "Heti program autóhoz vagy nyárhoz. Üresen hagyva a jelenlegi marad."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Szabadság",
+        "absence": "Távollét",
+        "visit": "Látogatás",
+        "auto": "Auto",
+        "summer": "Nyár",
+        "comfort": "Komfort",
+        "reduced": "Csökkentett",
+        "standby": "Készenlét"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Ismeretlen üzemmód."
+    },
+    "week_program_not_supported": {
+      "message": "A heti program csak autóra és nyárra vonatkozik."
+    },
+    "until_not_supported": {
+      "message": "Véget csak szabadsághoz, távolléthez és látogatáshoz lehet megadni."
+    },
+    "until_required": {
+      "message": "A szabadság, a távollét és a látogatás végidőpontot igényel. Használja az atmos.set_regime műveletet az until paraméterrel."
+    },
+    "until_in_past": {
+      "message": "A vég már a múltban van."
+    },
+    "until_not_today": {
+      "message": "A távollét és a látogatás csak később ma érhet véget. A szabályozó dátum nélküli időpontot tárol."
     }
   }
 }

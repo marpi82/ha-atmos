@@ -15,6 +15,20 @@
               "reduced": "Sænket",
               "standby": "Standby"
             }
+          },
+          "regime_end_time": {
+            "name": "Regime slutter kl."
+          },
+          "regime_end_date": {
+            "name": "Regime slutter den"
+          },
+          "week_program": {
+            "name": "Ugeprogram",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Sænket setpunkt"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Indstil regime",
+      "description": "Skifter kredsens regime. Ferie, fravær og besøg slutter af sig selv og vender tilbage til det faste regime.",
+      "fields": {
+        "preset": {
+          "name": "Regime",
+          "description": "Regime, der skiftes til."
+        },
+        "until": {
+          "name": "Indtil",
+          "description": "Slut på ferie (dato), fravær eller besøg (tidspunkt senere i dag, som i WG1000-dialogen). Kun for disse tre regimer."
+        },
+        "week_program": {
+          "name": "Ugeprogram",
+          "description": "Ugeprogram for auto eller sommer. Tomt beholder det nuværende."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Ferie",
+        "absence": "Fravær",
+        "visit": "Besøg",
+        "auto": "Auto",
+        "summer": "Sommer",
+        "comfort": "Komfort",
+        "reduced": "Sænket",
+        "standby": "Standby"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Ukendt regime."
+    },
+    "week_program_not_supported": {
+      "message": "Et ugeprogram gælder kun for auto og sommer."
+    },
+    "until_not_supported": {
+      "message": "Et sluttidspunkt kan kun sættes for ferie, fravær og besøg."
+    },
+    "until_required": {
+      "message": "Ferie, fravær og besøg skal have en slutning. Brug handlingen atmos.set_regime med until."
+    },
+    "until_in_past": {
+      "message": "Slutningen er allerede passeret."
+    },
+    "until_not_today": {
+      "message": "Fravær og besøg kan kun slutte senere i dag. Regulatoren gemmer et klokkeslæt uden dato."
     }
   }
 }

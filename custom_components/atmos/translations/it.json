@@ -15,6 +15,20 @@
               "reduced": "Ridotto",
               "standby": "Standby"
             }
+          },
+          "regime_end_time": {
+            "name": "Il regime termina alle"
+          },
+          "regime_end_date": {
+            "name": "Il regime termina il"
+          },
+          "week_program": {
+            "name": "Programma settimanale",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Setpoint ridotto"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Imposta regime",
+      "description": "Cambia il regime del circuito. Vacanze, assenza e visita terminano da sole e tornano al regime permanente.",
+      "fields": {
+        "preset": {
+          "name": "Regime",
+          "description": "Regime a cui passare."
+        },
+        "until": {
+          "name": "Fino a",
+          "description": "Fine delle vacanze (data), dell'assenza o della visita (orario più tardi oggi, come nella finestra WG1000). Solo per questi tre regimi."
+        },
+        "week_program": {
+          "name": "Programma settimanale",
+          "description": "Programma settimanale per auto o estate. Vuoto mantiene quello attuale."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Vacanze",
+        "absence": "Assenza",
+        "visit": "Visita",
+        "auto": "Auto",
+        "summer": "Estate",
+        "comfort": "Comfort",
+        "reduced": "Ridotto",
+        "standby": "Standby"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Regime sconosciuto."
+    },
+    "week_program_not_supported": {
+      "message": "Un programma settimanale vale solo per auto ed estate."
+    },
+    "until_not_supported": {
+      "message": "Una fine si imposta solo per vacanze, assenza e visita."
+    },
+    "until_required": {
+      "message": "Vacanze, assenza e visita richiedono una fine. Usare l'azione atmos.set_regime con until."
+    },
+    "until_in_past": {
+      "message": "La fine è già nel passato."
+    },
+    "until_not_today": {
+      "message": "Assenza e visita possono terminare solo più tardi oggi. Il regolatore memorizza un orario senza data."
     }
   }
 }

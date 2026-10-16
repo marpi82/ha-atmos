@@ -15,6 +15,20 @@
               "reduced": "Sänkt",
               "standby": "Standby"
             }
+          },
+          "regime_end_time": {
+            "name": "Regim slutar kl."
+          },
+          "regime_end_date": {
+            "name": "Regim slutar den"
+          },
+          "week_program": {
+            "name": "Veckoprogram",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Sänkt börvärde"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Ställ in regim",
+      "description": "Byter kretsens regim. Semester, frånvaro och besök tar slut av sig själva och återgår till den fasta regimen.",
+      "fields": {
+        "preset": {
+          "name": "Regim",
+          "description": "Regim att byta till."
+        },
+        "until": {
+          "name": "Till",
+          "description": "Slut på semester (datum), frånvaro eller besök (tid senare i dag, som i WG1000-dialogen). Bara för de tre regimerna."
+        },
+        "week_program": {
+          "name": "Veckoprogram",
+          "description": "Veckoprogram för auto eller sommar. Tomt behåller det nuvarande."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Semester",
+        "absence": "Frånvaro",
+        "visit": "Besök",
+        "auto": "Auto",
+        "summer": "Sommar",
+        "comfort": "Komfort",
+        "reduced": "Sänkt",
+        "standby": "Standby"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Okänd regim."
+    },
+    "week_program_not_supported": {
+      "message": "Ett veckoprogram gäller bara för auto och sommar."
+    },
+    "until_not_supported": {
+      "message": "En sluttid kan bara anges för semester, frånvaro och besök."
+    },
+    "until_required": {
+      "message": "Semester, frånvaro och besök behöver ett slut. Använd åtgärden atmos.set_regime med until."
+    },
+    "until_in_past": {
+      "message": "Slutet har redan passerat."
+    },
+    "until_not_today": {
+      "message": "Frånvaro och besök kan bara sluta senare i dag. Regulatorn sparar en tid utan datum."
     }
   }
 }

@@ -15,6 +15,20 @@
               "reduced": "Alam",
               "standby": "Ooterežiim"
             }
+          },
+          "regime_end_time": {
+            "name": "Režiim lõpeb kell"
+          },
+          "regime_end_date": {
+            "name": "Režiim lõpeb"
+          },
+          "week_program": {
+            "name": "Nädalaprogramm",
+            "state": {
+              "a": "A",
+              "b": "B",
+              "c": "C"
+            }
           }
         }
       }
@@ -26,6 +40,67 @@
       "setpoint_reduced": {
         "name": "Alamtemperatuur"
       }
+    }
+  },
+  "services": {
+    "set_regime": {
+      "name": "Sea režiim",
+      "description": "Lülitab ringi režiimi. Puhkus, eemalolek ja külastus lõpevad ise ja naasevad püsirežiimi.",
+      "fields": {
+        "preset": {
+          "name": "Režiim",
+          "description": "Režiim, millele lülituda."
+        },
+        "until": {
+          "name": "Kuni",
+          "description": "Puhkuse (kuupäev), eemaloleku või külastuse (kellaaeg hiljem täna, nagu WG1000 dialoogis) lõpp. Ainult nende kolme režiimi jaoks."
+        },
+        "week_program": {
+          "name": "Nädalaprogramm",
+          "description": "Nädalaprogramm autole või suvele. Tühi jätab praeguse."
+        }
+      }
+    }
+  },
+  "selector": {
+    "preset": {
+      "options": {
+        "holiday": "Puhkus",
+        "absence": "Eemalolek",
+        "visit": "Külastus",
+        "auto": "Auto",
+        "summer": "Suvi",
+        "comfort": "Mugavus",
+        "reduced": "Alam",
+        "standby": "Ooterežiim"
+      }
+    },
+    "week_program": {
+      "options": {
+        "a": "A",
+        "b": "B",
+        "c": "C"
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_preset": {
+      "message": "Tundmatu režiim."
+    },
+    "week_program_not_supported": {
+      "message": "Nädalaprogramm kehtib ainult autole ja suvele."
+    },
+    "until_not_supported": {
+      "message": "Lõpu saab seada ainult puhkusele, eemalolekule ja külastusele."
+    },
+    "until_required": {
+      "message": "Puhkus, eemalolek ja külastus vajavad lõppu. Kasutage toimingut atmos.set_regime parameetriga until."
+    },
+    "until_in_past": {
+      "message": "Lõpp on juba minevikus."
+    },
+    "until_not_today": {
+      "message": "Eemalolek ja külastus saavad lõppeda ainult hiljem täna. Regulaator salvestab kellaaja ilma kuupäevata."
     }
   }
 }
