@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Nädalaprogramm",
-          "description": "Nädalaprogramm autole või suvele. Tühi jätab praeguse."
+          "description": "Nädalaprogramm automaat- või suverežiimi jaoks. Tühi jätab praeguse."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Tundmatu režiim."
     },
     "week_program_not_supported": {
-      "message": "Nädalaprogramm kehtib ainult autole ja suvele."
+      "message": "Nädalaprogramm kehtib ainult automaat- ja suverežiimis."
     },
     "until_not_supported": {
       "message": "Lõpu saab seada ainult puhkusele, eemalolekule ja külastusele."

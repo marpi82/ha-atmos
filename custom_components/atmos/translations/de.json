@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Wochenprogramm",
-          "description": "Wochenprogramm für Auto oder Sommer. Leer lässt das aktuelle bestehen."
+          "description": "Wochenprogramm für Automatik oder Sommer. Leer lässt das aktuelle bestehen."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Unbekanntes Regime."
     },
     "week_program_not_supported": {
-      "message": "Ein Wochenprogramm gilt nur für Auto und Sommer."
+      "message": "Ein Wochenprogramm gilt nur für Automatik und Sommer."
     },
     "until_not_supported": {
       "message": "Ein Ende lässt sich nur für Urlaub, Abwesenheit und Besuch einstellen."

@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Tedenski program",
-          "description": "Tedenski program za avto ali poletje. Prazno obdrži trenutnega."
+          "description": "Tedenski program za samodejni ali poletni režim. Prazno obdrži trenutnega."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Neznan režim."
     },
     "week_program_not_supported": {
-      "message": "Tedenski program velja samo za avto in poletje."
+      "message": "Tedenski program velja samo za samodejni in poletni režim."
     },
     "until_not_supported": {
       "message": "Konec je mogoče nastaviti samo za počitnice, odsotnost in obisk."

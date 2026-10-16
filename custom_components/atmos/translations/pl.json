@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Program tygodniowy",
-          "description": "Program tygodniowy dla auto lub lato. Puste zostawia obecny."
+          "description": "Program tygodniowy dla trybu automatycznego lub letniego. Puste zostawia obecny."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Nieznany reżim."
     },
     "week_program_not_supported": {
-      "message": "Program tygodniowy dotyczy tylko auto i lato."
+      "message": "Program tygodniowy dotyczy tylko trybu automatycznego i letniego."
     },
     "until_not_supported": {
       "message": "Koniec można ustawić tylko dla wakacji, nieobecności i wizyty."
