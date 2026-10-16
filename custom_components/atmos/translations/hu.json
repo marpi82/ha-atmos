@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Heti program",
-          "description": "Heti program autóhoz vagy nyárhoz. Üresen hagyva a jelenlegi marad."
+          "description": "Heti program automatikus vagy nyári üzemmódhoz. Üresen hagyva a jelenlegi marad."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Ismeretlen üzemmód."
     },
     "week_program_not_supported": {
-      "message": "A heti program csak autóra és nyárra vonatkozik."
+      "message": "A heti program csak automatikus és nyári üzemmódban használható."
     },
     "until_not_supported": {
       "message": "Véget csak szabadsághoz, távolléthez és látogatáshoz lehet megadni."

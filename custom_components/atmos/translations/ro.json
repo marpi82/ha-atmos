@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Program săptămânal",
-          "description": "Program săptămânal pentru auto sau vară. Gol păstrează cel curent."
+          "description": "Program săptămânal pentru modul automat sau modul vară. Gol păstrează cel curent."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Regim necunoscut."
     },
     "week_program_not_supported": {
-      "message": "Un program săptămânal se aplică doar la auto și vară."
+      "message": "Un program săptămânal se aplică doar la modul automat și modul vară."
     },
     "until_not_supported": {
       "message": "Un sfârșit se poate seta doar pentru vacanță, absență și vizită."

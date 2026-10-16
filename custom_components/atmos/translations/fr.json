@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Programme hebdomadaire",
-          "description": "Programme hebdomadaire pour auto ou été. Vide conserve l'actuel."
+          "description": "Programme hebdomadaire pour le mode automatique ou le mode été. Vide conserve l'actuel."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Régime inconnu."
     },
     "week_program_not_supported": {
-      "message": "Un programme hebdomadaire ne vaut que pour auto et été."
+      "message": "Un programme hebdomadaire ne vaut que pour le mode automatique et le mode été."
     },
     "until_not_supported": {
       "message": "Une fin ne se règle que pour les vacances, l'absence et la visite."

@@ -57,7 +57,7 @@
         },
         "week_program": {
           "name": "Programma settimanale",
-          "description": "Programma settimanale per auto o estate. Vuoto mantiene quello attuale."
+          "description": "Programma settimanale per la modalità automatica o estate. Vuoto mantiene quello attuale."
         }
       }
     }
@@ -88,7 +88,7 @@
       "message": "Regime sconosciuto."
     },
     "week_program_not_supported": {
-      "message": "Un programma settimanale vale solo per auto ed estate."
+      "message": "Un programma settimanale vale solo per la modalità automatica e la modalità estate."
     },
     "until_not_supported": {
       "message": "Una fine si imposta solo per vacanze, assenza e visita."
