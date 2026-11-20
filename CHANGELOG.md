@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Circuit climate uses `native_*` temperature properties on Home Assistant 2026.11+,
+  with a fallback to the pre-2026.11 names so the HA floor stays `2026.8.0` (#50).
+
 ## [2026.10.2] - 2026-10-16
 
 ### Added
