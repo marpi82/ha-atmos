@@ -43,6 +43,10 @@ from .wiring import runtime_for
 _TEPLOTY = (Hod16.O1_TEPLOTY, Hod16.O2_TEPLOTY, Hod16.O3_TEPLOTY, Hod16.O4_TEPLOTY, Hod16.TUV_TEPLOTY)
 _REZIM = (Hod16.O1_REZIM, Hod16.O2_REZIM, Hod16.O3_REZIM, Hod16.O4_REZIM, Hod16.TUV_REZIM)
 
+# Home Assistant 2026.11 renamed climate temperature properties with a native_ prefix.
+# Prefer those when present; keep the old names on 2026.8-2026.10 so the HA floor stays.
+_HAS_NATIVE_CLIMATE_TEMP = hasattr(ClimateEntity, "native_current_temperature")
+
 SERVICE_SET_REGIME = "set_regime"
 ATTR_PRESET = "preset"
 ATTR_UNTIL = "until"
@@ -108,7 +112,10 @@ class AtmosCircuitClimate(ClimateEntity):
     _attr_should_poll = False
     _attr_name = None
     _attr_translation_key = "circuit"
-    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    if _HAS_NATIVE_CLIMATE_TEMP:
+        _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    else:
+        _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes: ClassVar[list[HVACMode]] = [HVACMode.HEAT, HVACMode.OFF]
     _attr_preset_modes: ClassVar[list[str]] = list(SIMPLE_PRESETS)
     _attr_supported_features = (
@@ -150,6 +157,14 @@ class AtmosCircuitClimate(ClimateEntity):
     def _state(self) -> CircuitState | None:
         return self._runtime.circuit(self._index)
 
+    def _current_c(self) -> float | None:
+        state = self._state()
+        return None if state is None else state.current_c
+
+    def _target_c(self) -> float | None:
+        state = self._state()
+        return None if state is None else state.active_setpoint_c
+
     @property
     def available(self) -> bool:
         """Available while WG1000 is active and the circuit snapshot exists."""
@@ -158,23 +173,35 @@ class AtmosCircuitClimate(ClimateEntity):
         state = self._state()
         return state is not None and state.active
 
-    @property
-    def native_current_temperature(self) -> float | None:
-        """Return the measured circuit temperature in Celsius."""
-        state = self._state()
-        return None if state is None else state.current_c
+    if _HAS_NATIVE_CLIMATE_TEMP:
+
+        @property
+        def native_current_temperature(self) -> float | None:
+            """Return the measured circuit temperature in Celsius."""
+            return self._current_c()
+
+        @property
+        def native_target_temperature(self) -> float | None:
+            """Return the active setpoint for the current temp icon type, in Celsius."""
+            return self._target_c()
+
+    else:
+
+        @property
+        def current_temperature(self) -> float | None:
+            """Return the measured circuit temperature."""
+            return self._current_c()
+
+        @property
+        def target_temperature(self) -> float | None:
+            """Return the active setpoint for the current temp icon type."""
+            return self._target_c()
 
     @property
     def current_humidity(self) -> float | None:
         """Return humidity when the circuit reports it."""
         state = self._state()
         return None if state is None else state.humidity
-
-    @property
-    def native_target_temperature(self) -> float | None:
-        """Return the active setpoint for the current temp icon type, in Celsius."""
-        state = self._state()
-        return None if state is None else state.active_setpoint_c
 
     @property
     def hvac_mode(self) -> HVACMode:

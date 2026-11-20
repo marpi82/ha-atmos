@@ -5,7 +5,7 @@
 [![HACS](https://img.shields.io/github/actions/workflow/status/marpi82/ha-atmos/hacs.yml?branch=main&label=HACS)](https://github.com/marpi82/ha-atmos/actions/workflows/hacs.yml)
 [![Codecov](https://codecov.io/gh/marpi82/ha-atmos/graph/badge.svg)](https://codecov.io/gh/marpi82/ha-atmos)
 [![License](https://img.shields.io/github/license/marpi82/ha-atmos)](https://github.com/marpi82/ha-atmos/blob/main/LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-%E2%89%A52026.11.0-blue)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-%E2%89%A52026.8.0-blue)](https://www.home-assistant.io/)
 
 Home Assistant custom integration for an ATMOS boiler. It can use a passive
 RS485 listen (`py-atmos-serial`), the local WG1000 WebSocket
@@ -93,8 +93,8 @@ uv sync --locked --group dev --group test
 uv run --group dev --group test poe validate
 ```
 
-Python matches the sibling libraries. Home Assistant minimum is `2026.11.0`
-(`hacs.json`; needed for climate `native_*` temperature properties).
+Python matches the sibling libraries. Home Assistant minimum is `2026.8.0`
+(`hacs.json`; needed for `via_device_id` in the device registry).
 
 ## Contributions are welcome!
 

@@ -4,10 +4,8 @@
 
 ### Changed
 
-- Circuit climate uses `native_*` temperature properties (`_attr_native_temperature_unit`,
-  `native_current_temperature`, `native_target_temperature`) instead of the names
-  deprecated in Home Assistant 2026.11 (#50).
-- Require Home Assistant `>=2026.11.0` (`hacs.json`).
+- Circuit climate uses `native_*` temperature properties on Home Assistant 2026.11+,
+  with a fallback to the pre-2026.11 names so the HA floor stays `2026.8.0` (#50).
 
 ## [2026.10.2] - 2026-10-16
 
