@@ -108,7 +108,7 @@ class AtmosCircuitClimate(ClimateEntity):
     _attr_should_poll = False
     _attr_name = None
     _attr_translation_key = "circuit"
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_hvac_modes: ClassVar[list[HVACMode]] = [HVACMode.HEAT, HVACMode.OFF]
     _attr_preset_modes: ClassVar[list[str]] = list(SIMPLE_PRESETS)
     _attr_supported_features = (
@@ -159,8 +159,8 @@ class AtmosCircuitClimate(ClimateEntity):
         return state is not None and state.active
 
     @property
-    def current_temperature(self) -> float | None:
-        """Return the measured circuit temperature."""
+    def native_current_temperature(self) -> float | None:
+        """Return the measured circuit temperature in Celsius."""
         state = self._state()
         return None if state is None else state.current_c
 
@@ -171,8 +171,8 @@ class AtmosCircuitClimate(ClimateEntity):
         return None if state is None else state.humidity
 
     @property
-    def target_temperature(self) -> float | None:
-        """Return the active setpoint for the current temp icon type."""
+    def native_target_temperature(self) -> float | None:
+        """Return the active setpoint for the current temp icon type, in Celsius."""
         state = self._state()
         return None if state is None else state.active_setpoint_c
 
